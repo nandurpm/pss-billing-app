@@ -5,6 +5,7 @@ on:
     branches: [ main, master ]
     paths:
       - 'pss-android-project.zip'
+      - 'pss-android-project.zip.b64'
   workflow_dispatch: {}
 
 permissions:
@@ -19,10 +20,16 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Restore ZIP if uploaded as Base64 text
+        run: |
+          if [ ! -f pss-android-project.zip ] && [ -f pss-android-project.zip.b64 ]; then
+            base64 -d pss-android-project.zip.b64 > pss-android-project.zip
+          fi
+
       - name: Check uploaded ZIP exists
         run: |
           if [ ! -f pss-android-project.zip ]; then
-            echo "pss-android-project.zip not found in repo root. Upload it first, then run this workflow."
+            echo "pss-android-project.zip not found in repo root. Upload pss-android-project.zip or pss-android-project.zip.b64 first, then run this workflow."
             exit 1
           fi
 
@@ -36,7 +43,7 @@ jobs:
           fi
           shopt -s dotglob
           cp -a pss-app/* .
-          rm -rf pss-app pss-android-project.zip
+          rm -rf pss-app pss-android-project.zip pss-android-project.zip.b64
 
       - name: Replace APK build workflow with safer JDK 21 workflow
         run: |
