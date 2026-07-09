@@ -1,27 +1,34 @@
 # Purple Signature Salon Billing Android App
 
-This repository now contains a buildable Android billing app project.
+This repository contains the Android billing app for Purple Signature Salon.
 
-## What is inside
+## Current fixes added
 
-- Native Android WebView app
-- Offline billing screen stored at `app/src/main/assets/www/index.html`
-- Local bill saving using phone browser storage inside WebView
-- Print / PDF option
-- Share bill text option
-- GitHub Actions workflow to build a debug APK
+- Camera / notch overlap fixed by removing fullscreen WebView layout flags.
+- Business-only UI. No prompt text such as "offline ready" or "mobile APK" is shown inside the app.
+- Saved bills now use IndexedDB instead of simple localStorage, so large bill history is safer.
+- Saved bills search added by customer name, mobile number, invoice number, and date.
+- After saving a bill, the app asks whether to open a new bill.
+- Admin login added.
+- Admin can edit service rates.
+- Admin can update salon details.
+- Admin can upload a payment QR image for invoice display.
+- Purple Signature Salon logo asset added.
+- Android launcher icon added.
+
+## Admin login
+
+Username: `ps`
+
+Password: `123`
 
 ## APK build
 
-The APK build workflow is available here:
+The APK build workflow is:
 
 `.github/workflows/build-apk.yml`
 
-It builds:
-
-`app/build/outputs/apk/debug/app-debug.apk`
-
-and uploads it as this artifact:
+It uploads the APK artifact as:
 
 `pss-billing-debug-apk`
 
