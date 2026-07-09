@@ -1,1 +1,1 @@
-Build trigger for GitHub Actions.
+Build trigger after Purple Signature app fixes.
