@@ -1,1 +1,1 @@
-Build trigger after Purple Signature app fixes.
+Build trigger after admin bottom and style fixes.
