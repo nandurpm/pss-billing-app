@@ -1,1 +1,1 @@
-Build trigger after native Android print PDF fix.
+Build trigger after simplified workflow and print bridge compile fix.
