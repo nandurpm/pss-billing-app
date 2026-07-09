@@ -320,6 +320,17 @@ function clearSearch() {
   renderHistory();
 }
 
+function printBill() {
+  renderInvoice();
+  setTimeout(() => {
+    if (window.NativePrint && typeof window.NativePrint.printBill === 'function') {
+      window.NativePrint.printBill();
+    } else {
+      window.print();
+    }
+  }, 250);
+}
+
 async function shareBill() {
   const bill = billData();
   const text = `${settings.businessName}\nInvoice: ${bill.invoiceNo}\nCustomer: ${bill.customer}\nTotal: ${money(bill.grand)}\nPayment: ${bill.payment}`;
