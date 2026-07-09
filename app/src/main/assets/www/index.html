@@ -8,15 +8,15 @@
 </head>
 <body>
 <div class="app">
-  <header class="top">
-    <div class="logoBox"><img id="topLogo" src="logo.svg" alt="Purple Signature Salon logo"></div>
+  <header class="top safeTop">
+    <div class="brandMark"><img src="logo.svg" alt="Purple Signature Salon"></div>
     <div class="title"><h1 id="topBusiness">Purple Signature Salon</h1><p id="topTagline">Skin · Hair · Bridal · Nails</p></div>
-    <div class="topActions"><span class="pill" id="clock">Billing</span><button class="btn gold" onclick="openAdmin()">Admin</button></div>
+    <span class="pill" id="clock">Billing</span>
   </header>
 
   <main class="grid">
     <section class="card input-card">
-      <div class="section-title"><h2>Bill Entry</h2><span class="small">Customer billing</span></div>
+      <div class="section-title"><h2>Create Bill</h2><span class="small">Fast salon billing</span></div>
       <div class="form">
         <div class="field"><label>Invoice No</label><input id="invoiceNo"></div>
         <div class="field"><label>Date</label><input id="billDate" type="date"></div>
@@ -29,21 +29,24 @@
         <div class="field full"><label>Notes</label><textarea id="notes" placeholder="Notes / pending balance / package details"></textarea></div>
       </div>
 
-      <div class="section-title service-title"><h2>Services</h2><span class="small">Admin can edit rates</span></div>
+      <div class="section-title service-title"><h2>Services</h2><span class="small">Tap service to add</span></div>
       <div class="services" id="serviceButtons"></div>
-      <div class="addLine">
-        <div class="field"><label>Item</label><select id="itemSelect"></select></div>
+
+      <div class="manualAdd">
+        <div class="field"><label>Service / Product</label><select id="itemSelect"></select></div>
         <div class="field"><label>Qty</label><input id="itemQty" type="number" min="1" value="1"></div>
         <div class="field"><label>Rate ₹</label><input id="itemRate" type="number" min="0" value="0"></div>
-        <button class="btn primary" onclick="addSelectedItem()">Add</button>
+        <button class="btn primary" onclick="addSelectedItem()">Add Item</button>
       </div>
 
-      <table>
-        <thead><tr><th class="item-col">Item</th><th>Qty</th><th>Rate</th><th>Total</th><th></th></tr></thead>
-        <tbody id="items"></tbody>
-      </table>
+      <div class="tableWrap">
+        <table>
+          <thead><tr><th class="item-col">Item</th><th>Qty</th><th>Rate</th><th>Total</th><th></th></tr></thead>
+          <tbody id="items"></tbody>
+        </table>
+      </div>
 
-      <div class="actions">
+      <div class="actions stickyActions">
         <button class="btn primary" onclick="saveBill()">Save Bill</button>
         <button class="btn dark" onclick="window.print()">Print / PDF</button>
         <button class="btn ghost" onclick="shareBill()">Share</button>
@@ -58,46 +61,43 @@
       </section>
 
       <section class="card history-wrap">
-        <div class="section-title"><h2>Saved Bills</h2><span class="small" id="billCount">0</span></div>
+        <div class="section-title"><h2>Saved Bills</h2><span class="small" id="billCount">0 bills</span></div>
         <div class="historySearch"><input id="searchBox" placeholder="Search name / mobile / invoice"><input id="searchDate" type="date"></div>
-        <div class="actions history-actions"><button class="btn ghost small" onclick="clearSearch()">Clear Search</button><button class="btn ghost small" onclick="exportBills()">Export Backup</button></div>
+        <div class="actions history-actions"><button class="btn ghost small" onclick="clearSearch()">Clear</button><button class="btn ghost small" onclick="exportBills()">Backup</button></div>
         <div class="history" id="history"></div>
       </section>
     </aside>
   </main>
-</div>
 
-<div class="modal" id="adminModal">
-  <div class="modalCard">
-    <div class="modalHead"><h2>Admin Controls</h2><button class="btn danger" onclick="closeAdmin()">Close</button></div>
-    <div id="loginBox" class="adminLogin">
-      <div class="warn">Admin area controls service rates, salon details, QR code and billing settings.</div>
-      <div class="field"><label>Username</label><input id="adminUser" autocomplete="username"></div>
-      <div class="field"><label>Password</label><input id="adminPass" type="password" autocomplete="current-password"></div>
-      <button class="btn primary wide" onclick="adminLogin()">Login</button>
+  <section class="adminBottom card" id="adminSection">
+    <div class="adminCollapsed" id="adminLock">
+      <div><h2>Admin Settings</h2><p>Rates, QR code and salon details</p></div>
+      <div class="adminUnlock"><input id="adminPass" type="password" inputmode="numeric" placeholder="Admin password"><button class="btn gold" onclick="adminLogin()">Unlock</button></div>
     </div>
+
     <div id="adminPanel" class="hidden">
+      <div class="section-title"><div><h2>Admin Settings</h2><span class="small">Unlocked</span></div><button class="btn danger small" onclick="adminLogout()">Lock</button></div>
       <div class="adminGrid">
         <div>
-          <div class="section-title"><h2>Salon Details</h2><button class="btn primary small" onclick="saveSettingsFromAdmin()">Save Settings</button></div>
+          <div class="section-title"><h3>Salon Details</h3><button class="btn primary small" onclick="saveSettingsFromAdmin()">Save</button></div>
           <div class="form">
             <div class="field"><label>Business Name</label><input id="setBusiness"></div>
             <div class="field"><label>Tagline</label><input id="setTagline"></div>
             <div class="field"><label>Phone</label><input id="setPhone"></div>
             <div class="field"><label>GST / License</label><input id="setGst"></div>
             <div class="field full"><label>Address</label><textarea id="setAddress"></textarea></div>
-            <div class="field full"><label>Payment QR Image</label><input id="qrFile" type="file" accept="image/*"><span class="small">Upload GPay / PhonePe / UPI QR image. It will show on invoice.</span></div>
+            <div class="field full"><label>Payment QR Image</label><input id="qrFile" type="file" accept="image/*"><span class="small">Upload UPI QR. Press Save after selecting.</span></div>
           </div>
           <div id="qrPreviewBox"></div>
         </div>
         <div>
-          <div class="section-title"><h2>Service Rates</h2><button class="btn gold small" onclick="addServiceRow()">+ Add Service</button></div>
-          <table class="adminTable"><thead><tr><th>Service</th><th>Rate</th><th></th></tr></thead><tbody id="serviceAdminRows"></tbody></table>
+          <div class="section-title"><h3>Service Rates</h3><button class="btn gold small" onclick="addServiceRow()">+ Add</button></div>
+          <div class="tableWrap"><table class="adminTable"><thead><tr><th>Service</th><th>Rate</th><th></th></tr></thead><tbody id="serviceAdminRows"></tbody></table></div>
         </div>
       </div>
-      <div class="actions"><button class="btn primary" onclick="saveSettingsFromAdmin()">Save All Admin Changes</button><button class="btn ghost" onclick="adminLogout()">Logout</button></div>
+      <div class="actions"><button class="btn primary" onclick="saveSettingsFromAdmin()">Save All Changes</button></div>
     </div>
-  </div>
+  </section>
 </div>
 
 <script src="app.js"></script>
