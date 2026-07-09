@@ -1,9 +1,14 @@
 package com.purplesignature.billing;
 
 import android.app.Activity;
+import android.content.Context;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.print.PrintAttributes;
+import android.print.PrintDocumentAdapter;
+import android.print.PrintManager;
 import android.view.Window;
+import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -34,11 +39,45 @@ public class MainActivity extends Activity {
         settings.setBuiltInZoomControls(false);
         settings.setDisplayZoomControls(false);
 
+        webView.addJavascriptInterface(new PrintBridge(), "NativePrint");
         webView.setWebViewClient(new WebViewClient());
-        webView.setWebChromeClient(new WebChromeClient());
+        webView.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public void onPrintRequest(WebView view) {
+                printCurrentBill();
+            }
+        });
         setContentView(webView);
 
         webView.loadUrl("file:///android_asset/www/index.html");
+    }
+
+    private void printCurrentBill() {
+        if (webView == null) return;
+
+        PrintManager printManager = (PrintManager) getSystemService(Context.PRINT_SERVICE);
+        if (printManager == null) return;
+
+        String jobName = "Purple_Signature_Bill_" + System.currentTimeMillis();
+        PrintDocumentAdapter printAdapter = webView.createPrintDocumentAdapter(jobName);
+        PrintAttributes attributes = new PrintAttributes.Builder()
+                .setMediaSize(PrintAttributes.MediaSize.ISO_A4)
+                .setColorMode(PrintAttributes.COLOR_MODE_COLOR)
+                .setMinMargins(PrintAttributes.Margins.NO_MARGINS)
+                .build();
+        printManager.print(jobName, printAdapter, attributes);
+    }
+
+    public class PrintBridge {
+        @JavascriptInterface
+        public void printBill() {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    printCurrentBill();
+                }
+            });
+        }
     }
 
     @Override
