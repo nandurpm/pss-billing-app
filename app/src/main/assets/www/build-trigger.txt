@@ -1,1 +1,1 @@
-Build trigger after simplified workflow and print bridge compile fix.
+Build trigger after invoice-only PDF print implementation.
