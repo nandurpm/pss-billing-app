@@ -3,12 +3,10 @@ name: Build Android APK
 on:
   push:
     branches: [ main, master ]
-    paths:
-      - 'app/**'
-      - 'build.gradle'
-      - 'settings.gradle'
-      - '.github/workflows/build-apk.yml'
   workflow_dispatch: {}
+
+permissions:
+  contents: read
 
 jobs:
   build:
@@ -26,18 +24,29 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Android packages
-        run: |
-          yes | sdkmanager --licenses
-          sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      - name: Accept Android SDK licenses
+        run: yes | sdkmanager --licenses || true
+
+      - name: Install Android SDK packages
+        run: sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.10.2'
 
+      - name: Show build environment
+        run: |
+          java -version
+          gradle --version
+          ls -la
+          ls -la app/src/main || true
+
       - name: Build debug APK
-        run: gradle assembleDebug --no-daemon
+        run: gradle :app:assembleDebug --no-daemon --stacktrace
+
+      - name: Verify APK exists
+        run: ls -lh app/build/outputs/apk/debug/app-debug.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
