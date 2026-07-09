@@ -1,1 +1,1 @@
-Build trigger after invoice-only PDF print implementation.
+Build trigger after direct native PDF export and uploaded banner update.
