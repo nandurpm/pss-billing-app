@@ -1,24 +1,24 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 720" role="img" aria-label="Purple Signature Salon">
   <defs>
-    <radialGradient id="g" cx="50%" cy="42%" r="75%">
+    <radialGradient id="paper" cx="50%" cy="40%" r="78%">
       <stop offset="0" stop-color="#ffffff"/>
-      <stop offset="0.55" stop-color="#f1e7fb"/>
-      <stop offset="1" stop-color="#d8c4eb"/>
+      <stop offset="0.52" stop-color="#f3eafc"/>
+      <stop offset="1" stop-color="#d8c3e8"/>
     </radialGradient>
-    <filter id="sparkle" x="-20%" y="-20%" width="140%" height="140%">
-      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="8"/>
+    <filter id="softNoise" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.72" numOctaves="3" seed="17"/>
       <feColorMatrix type="saturate" values="0"/>
-      <feComponentTransfer><feFuncA type="table" tableValues="0 .18"/></feComponentTransfer>
+      <feComponentTransfer><feFuncA type="table" tableValues="0 .12"/></feComponentTransfer>
     </filter>
   </defs>
-  <rect width="1080" height="720" fill="#4a155f"/>
-  <rect x="24" y="22" width="1032" height="676" fill="url(#g)" stroke="#d4b45a" stroke-width="8"/>
-  <rect x="38" y="36" width="1004" height="648" fill="none" stroke="#551667" stroke-width="7"/>
-  <rect x="38" y="36" width="1004" height="648" fill="#fff" opacity=".18" filter="url(#sparkle)"/>
-  <text x="540" y="315" text-anchor="middle" font-family="Arial Rounded MT Bold, Arial, sans-serif" font-size="190" font-weight="900" fill="#7b2a8f" letter-spacing="-8">Purple</text>
-  <text x="540" y="395" text-anchor="middle" font-family="Arial, sans-serif" font-size="43" font-weight="700" letter-spacing="34" fill="#a57b2d">SIGNATURE SALON</text>
+  <rect width="1080" height="720" fill="#48145e"/>
+  <rect x="20" y="18" width="1040" height="684" fill="none" stroke="#d2ad57" stroke-width="7"/>
+  <rect x="31" y="29" width="1018" height="662" fill="url(#paper)" stroke="#551667" stroke-width="6"/>
+  <rect x="31" y="29" width="1018" height="662" fill="#fff" opacity=".24" filter="url(#softNoise)"/>
+  <text x="540" y="315" text-anchor="middle" font-family="Trebuchet MS, Arial, sans-serif" font-size="190" font-weight="800" fill="#782c88" letter-spacing="-9">Purple</text>
+  <text x="540" y="398" text-anchor="middle" font-family="Arial, sans-serif" font-size="43" font-weight="700" letter-spacing="34" fill="#a0782e">SIGNATURE SALON</text>
   <line x1="210" y1="438" x2="480" y2="438" stroke="#b68c35" stroke-width="2"/>
-  <text x="540" y="456" text-anchor="middle" font-family="Georgia, serif" font-size="60" fill="#b68c35">∞</text>
+  <text x="540" y="456" text-anchor="middle" font-family="Georgia, serif" font-size="58" fill="#b68c35">∞</text>
   <line x1="600" y1="438" x2="870" y2="438" stroke="#b68c35" stroke-width="2"/>
-  <text x="540" y="585" text-anchor="middle" font-family="Arial, sans-serif" font-size="44" font-weight="900" letter-spacing="12" fill="#7b2a8f">SKIN  |  HAIR  |  BRIDAL  |  NAILS</text>
+  <text x="540" y="585" text-anchor="middle" font-family="Arial, sans-serif" font-size="44" font-weight="900" letter-spacing="12" fill="#782c88">SKIN  |  HAIR  |  BRIDAL  |  NAILS</text>
 </svg>
