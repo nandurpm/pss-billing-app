@@ -1,32 +1,41 @@
 # Purple Signature Salon Billing Android App
 
-This repository is prepared for building the Android APK from `pss-android-project.zip`.
+This repository now contains a buildable Android billing app project.
 
-## What I already added
+## What is inside
 
-- `.github/workflows/unpack-project.yml`
-- This workflow automatically unzips `pss-android-project.zip`, moves the project files into the repository root, fixes the APK build workflow to use JDK 21, commits the extracted project, and pushes it back to `main`.
+- Native Android WebView app
+- Offline billing screen stored at `app/src/main/assets/www/index.html`
+- Local bill saving using phone browser storage inside WebView
+- Print / PDF option
+- Share bill text option
+- GitHub Actions workflow to build a debug APK
 
-## What you need to do now from phone
+## APK build
 
-1. Open this repository on GitHub:
-   `nandurpm/pss-billing-app`
-2. Tap **Add file** → **Upload files**.
-3. Upload the file named exactly:
-   `pss-android-project.zip`
-4. Tap **Commit changes**.
-5. Go to **Actions**.
-6. Open **Unpack Uploaded Android Project**.
-7. It should run automatically after the ZIP upload. If not, open it and tap **Run workflow**.
-8. After it completes, another workflow named **Build Android APK** will start.
-9. Open **Build Android APK** after it turns green.
-10. Download artifact:
-    `pss-billing-debug-apk`
-11. Extract the downloaded zip and install:
-    `app-debug.apk`
+The APK build workflow is available here:
 
-## Important
+`.github/workflows/build-apk.yml`
 
-The ZIP must contain the folder `pss-app/` inside it. Your uploaded ZIP already has that structure.
+It builds:
 
-The APK is a debug APK. Android may ask you to allow **Install unknown apps** before installing.
+`app/build/outputs/apk/debug/app-debug.apk`
+
+and uploads it as this artifact:
+
+`pss-billing-debug-apk`
+
+## How to download APK
+
+1. Open this repository on GitHub.
+2. Go to **Actions**.
+3. Open **Build Android APK**.
+4. If no run is visible, press **Run workflow**.
+5. Open the green completed run.
+6. Download artifact: `pss-billing-debug-apk`.
+7. Extract the zip.
+8. Install `app-debug.apk` on Android.
+
+## Note
+
+This is a debug APK, so Android may ask you to allow **Install unknown apps** before installing.
