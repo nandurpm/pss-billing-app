@@ -1,0 +1,104 @@
+name: Unpack Uploaded Android Project
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'pss-android-project.zip'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  unpack:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check uploaded ZIP exists
+        run: |
+          if [ ! -f pss-android-project.zip ]; then
+            echo "pss-android-project.zip not found in repo root. Upload it first, then run this workflow."
+            exit 1
+          fi
+
+      - name: Unzip Android project into repo root
+        run: |
+          rm -rf pss-app
+          unzip -oq pss-android-project.zip
+          if [ ! -d pss-app ]; then
+            echo "ZIP must contain pss-app folder. Current ZIP structure is wrong."
+            exit 1
+          fi
+          shopt -s dotglob
+          cp -a pss-app/* .
+          rm -rf pss-app pss-android-project.zip
+
+      - name: Replace APK build workflow with safer JDK 21 workflow
+        run: |
+          mkdir -p .github/workflows
+          cat > .github/workflows/build-apk.yml <<'YAML'
+          name: Build Android APK
+
+          on:
+            push:
+              branches: [ main, master ]
+            workflow_dispatch: {}
+
+          jobs:
+            build:
+              runs-on: ubuntu-latest
+              steps:
+                - name: Checkout repo
+                  uses: actions/checkout@v4
+
+                - name: Set up JDK 21
+                  uses: actions/setup-java@v4
+                  with:
+                    distribution: temurin
+                    java-version: '21'
+
+                - name: Set up Android SDK
+                  uses: android-actions/setup-android@v3
+
+                - name: Set up Node.js
+                  uses: actions/setup-node@v4
+                  with:
+                    node-version: '20'
+                    cache: npm
+
+                - name: Install npm dependencies
+                  run: npm ci
+
+                - name: Sync Capacitor Android project
+                  run: npx cap sync android
+
+                - name: Make Gradle wrapper executable
+                  run: chmod +x android/gradlew
+
+                - name: Build debug APK
+                  working-directory: android
+                  run: ./gradlew assembleDebug --no-daemon
+
+                - name: Upload APK artifact
+                  uses: actions/upload-artifact@v4
+                  with:
+                    name: pss-billing-debug-apk
+                    path: android/app/build/outputs/apk/debug/app-debug.apk
+          YAML
+
+      - name: Commit extracted project
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "Add Purple Signature Salon Android project"
+            git push
+          fi
