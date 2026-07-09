@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Purple Signature Salon Billing</title>
+  <style>
+    :root{--bg:#13001f;--card:#ffffff;--ink:#1f1230;--muted:#74657d;--brand:#8b1fa9;--brand2:#d04cff;--ok:#138a36;--danger:#c62828;--line:#eadff0;--soft:#fbf6ff}
+    *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Arial,sans-serif;background:linear-gradient(135deg,#12001a,#391056 45%,#7b1fa2);color:var(--ink);min-height:100vh}
+    .app{max-width:1180px;margin:auto;padding:18px}.top{display:flex;gap:14px;align-items:center;justify-content:space-between;color:white;margin-bottom:16px}.brand{display:flex;gap:12px;align-items:center}.logo{width:54px;height:54px;border-radius:18px;background:linear-gradient(135deg,#fff,#ffd6ff);display:grid;place-items:center;color:#7b149c;font-weight:900;font-size:22px;box-shadow:0 16px 40px #0006}.brand h1{margin:0;font-size:22px}.brand p{margin:4px 0 0;color:#f0d8ff;font-size:13px}.pill{background:#ffffff22;border:1px solid #ffffff33;border-radius:999px;padding:9px 13px;color:white;font-size:13px}
+    .grid{display:grid;grid-template-columns:1fr 390px;gap:16px}.card{background:rgba(255,255,255,.96);border-radius:24px;padding:18px;box-shadow:0 20px 60px #12001a55;border:1px solid #ffffff55}.section-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}.section-title h2{margin:0;font-size:18px}.small{font-size:12px;color:var(--muted)}
+    .form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.field label{display:block;font-weight:700;font-size:12px;color:#4d315f;margin:0 0 6px}.field input,.field select,.field textarea{width:100%;border:1px solid var(--line);background:#fff;border-radius:14px;padding:12px 13px;font-size:15px;outline:none}.field textarea{min-height:72px;resize:vertical}.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--brand);box-shadow:0 0 0 4px #8b1fa91a}.full{grid-column:1/-1}
+    .quick{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:14px 0}.quick button,.btn{border:0;border-radius:14px;padding:12px 12px;font-weight:800;cursor:pointer;background:#f2e6f7;color:#5f137c}.quick button:active,.btn:active{transform:scale(.98)}.btn.primary{background:linear-gradient(135deg,var(--brand),var(--brand2));color:white}.btn.dark{background:#21102e;color:white}.btn.ghost{background:white;border:1px solid var(--line);color:#431455}.btn.danger{background:#ffe8e8;color:var(--danger)}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+    table{width:100%;border-collapse:collapse;margin-top:12px;overflow:hidden;border-radius:18px}th{background:#2b0d3d;color:white;text-align:left;font-size:12px;padding:11px}td{border-bottom:1px solid var(--line);padding:9px;font-size:13px;vertical-align:middle}td input{width:100%;border:1px solid #eee;border-radius:10px;padding:9px}.num{text-align:right}.remove{border:0;background:#ffe7e7;color:#b10000;border-radius:10px;padding:8px 10px;font-weight:900}
+    .summary{display:grid;gap:9px}.sumrow{display:flex;justify-content:space-between;align-items:center;background:var(--soft);border:1px solid var(--line);border-radius:15px;padding:11px 12px}.sumrow strong{font-size:20px}.grand{background:linear-gradient(135deg,#7b1fa2,#c63dff);color:white;border:0}.history{margin-top:14px;display:grid;gap:8px;max-height:260px;overflow:auto}.history-item{border:1px solid var(--line);border-radius:14px;padding:10px;background:white;display:flex;justify-content:space-between;gap:8px}.history-item b{display:block}.invoice{background:white;border-radius:22px;padding:20px;color:#1f1230}.invoice-head{display:flex;justify-content:space-between;gap:12px;border-bottom:2px solid #f0e2f5;padding-bottom:13px}.invoice h3{margin:0;color:#7b1fa2;font-size:21px}.invoice p{margin:4px 0;color:#65536e}.invoice .total{font-size:27px;font-weight:900;color:#7b1fa2}.footer-note{text-align:center;font-size:12px;color:#76627e;margin-top:14px}
+    @media(max-width:900px){.grid{grid-template-columns:1fr}.form{grid-template-columns:1fr}.quick{grid-template-columns:repeat(2,1fr)}.top{align-items:flex-start;flex-direction:column}.app{padding:12px}.card{border-radius:18px;padding:14px}table{font-size:12px}th,td{padding:7px}}
+    @media print{body{background:white}.app>.top,.input-card,.actions,.history-wrap{display:none!important}.grid{display:block}.card{box-shadow:none;border:0}.invoice{padding:0}.preview-card{display:block}.app{padding:0}.invoice-head{break-inside:avoid}}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="top">
+      <div class="brand"><div class="logo">PS</div><div><h1>Purple Signature Salon</h1><p>Billing App · Offline ready · Mobile APK</p></div></div>
+      <div class="pill" id="clock">Billing Dashboard</div>
+    </div>
+    <div class="grid">
+      <div class="card input-card">
+        <div class="section-title"><h2>Bill Entry</h2><span class="small">All data saves in this phone</span></div>
+        <div class="form">
+          <div class="field"><label>Invoice No</label><input id="invoiceNo"></div>
+          <div class="field"><label>Date</label><input id="billDate" type="date"></div>
+          <div class="field"><label>Customer Name</label><input id="customer" placeholder="Walk-in customer"></div>
+          <div class="field"><label>Mobile</label><input id="mobile" inputmode="tel" placeholder="Optional"></div>
+          <div class="field"><label>Payment Mode</label><select id="payment"><option>Cash</option><option>UPI</option><option>Card</option><option>Credit</option></select></div>
+          <div class="field"><label>Tax %</label><input id="tax" type="number" value="0" min="0" step="0.01"></div>
+          <div class="field"><label>Discount ₹</label><input id="discount" type="number" value="0" min="0" step="1"></div>
+          <div class="field"><label>Staff</label><input id="staff" placeholder="Staff name"></div>
+          <div class="field full"><label>Notes</label><textarea id="notes" placeholder="Example: bridal package advance, product sale, pending balance..."></textarea></div>
+        </div>
+
+        <div class="quick">
+          <button onclick="quickAdd('Hair Cut',250)">Hair Cut ₹250</button>
+          <button onclick="quickAdd('Hair Spa',1200)">Hair Spa ₹1200</button>
+          <button onclick="quickAdd('Facial',900)">Facial ₹900</button>
+          <button onclick="quickAdd('Threading',80)">Threading ₹80</button>
+          <button onclick="quickAdd('Bridal Makeup',8500)">Bridal ₹8500</button>
+          <button onclick="quickAdd('Product Sale',500)">Product ₹500</button>
+        </div>
+
+        <div class="section-title"><h2>Services / Products</h2><button class="btn ghost" onclick="addRow()">+ Add Item</button></div>
+        <table id="itemsTable">
+          <thead><tr><th style="width:42%">Item</th><th>Qty</th><th>Rate</th><th>Total</th><th></th></tr></thead>
+          <tbody id="items"></tbody>
+        </table>
+        <div class="actions">
+          <button class="btn primary" onclick="saveBill()">Save Bill</button>
+          <button class="btn dark" onclick="window.print()">Print / PDF</button>
+          <button class="btn ghost" onclick="shareBill()">Share Text</button>
+          <button class="btn danger" onclick="newBill()">New Bill</button>
+        </div>
+      </div>
+
+      <div>
+        <div class="card preview-card">
+          <div class="section-title"><h2>Invoice Preview</h2><span class="small">Live calculation</span></div>
+          <div class="invoice" id="invoicePreview"></div>
+        </div>
+        <div class="card history-wrap" style="margin-top:16px">
+          <div class="section-title"><h2>Saved Bills</h2><button class="btn ghost" onclick="clearHistory()">Clear</button></div>
+          <div class="history" id="history"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const $=id=>document.getElementById(id);let items=[];
+function money(n){return '₹'+(Number(n)||0).toFixed(2)}
+function today(){return new Date().toISOString().slice(0,10)}
+function invNo(){const d=new Date();return 'PSS-'+d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0')+'-'+String(Date.now()).slice(-5)}
+function init(){ $('billDate').value=today(); $('invoiceNo').value=invNo(); addRow('Hair Cut',1,250); bindInputs(); tick(); setInterval(tick,1000); renderHistory(); render(); }
+function tick(){ $('clock').textContent=new Date().toLocaleString('en-IN',{dateStyle:'medium',timeStyle:'short'}); }
+function bindInputs(){ ['invoiceNo','billDate','customer','mobile','payment','tax','discount','staff','notes'].forEach(id=>$(id).addEventListener('input',render)); }
+function addRow(name='',qty=1,rate=0){items.push({name,qty,rate});renderItems();render();}
+function quickAdd(name,rate){addRow(name,1,rate)}
+function removeRow(i){items.splice(i,1);if(!items.length)addRow();renderItems();render();}
+function renderItems(){const body=$('items');body.innerHTML='';items.forEach((it,i)=>{const tr=document.createElement('tr');tr.innerHTML=`<td><input value="${escapeHtml(it.name)}" oninput="items[${i}].name=this.value;render()"></td><td><input type="number" min="1" value="${it.qty}" oninput="items[${i}].qty=+this.value;render()"></td><td><input type="number" min="0" value="${it.rate}" oninput="items[${i}].rate=+this.value;render()"></td><td class="num"><b>${money((+it.qty||0)*(+it.rate||0))}</b></td><td><button class="remove" onclick="removeRow(${i})">×</button></td>`;body.appendChild(tr);});}
+function calc(){const subtotal=items.reduce((s,it)=>s+(+it.qty||0)*(+it.rate||0),0);const discount=+$('discount').value||0;const taxable=Math.max(0,subtotal-discount);const taxAmount=taxable*((+$('tax').value||0)/100);const grand=taxable+taxAmount;return{subtotal,discount,taxAmount,grand};}
+function data(){return{invoiceNo:$('invoiceNo').value,billDate:$('billDate').value,customer:$('customer').value||'Walk-in Customer',mobile:$('mobile').value,payment:$('payment').value,tax:+$('tax').value||0,discount:+$('discount').value||0,staff:$('staff').value,notes:$('notes').value,items:items.filter(x=>x.name||x.rate),...calc()};}
+function render(){const d=data();$('invoicePreview').innerHTML=`<div class="invoice-head"><div><h3>Purple Signature Salon</h3><p>Beauty · Hair · Makeup · Products</p><p><b>Invoice:</b> ${d.invoiceNo}</p><p><b>Date:</b> ${d.billDate}</p></div><div style="text-align:right"><p><b>Customer</b></p><p>${escapeHtml(d.customer)}</p><p>${escapeHtml(d.mobile||'')}</p><p>${escapeHtml(d.payment)}</p></div></div><table><thead><tr><th>Item</th><th>Qty</th><th>Rate</th><th>Total</th></tr></thead><tbody>${d.items.map(it=>`<tr><td>${escapeHtml(it.name)}</td><td class="num">${it.qty}</td><td class="num">${money(it.rate)}</td><td class="num">${money((+it.qty||0)*(+it.rate||0))}</td></tr>`).join('')}</tbody></table><div class="summary" style="margin-top:12px"><div class="sumrow"><span>Subtotal</span><b>${money(d.subtotal)}</b></div><div class="sumrow"><span>Discount</span><b>${money(d.discount)}</b></div><div class="sumrow"><span>Tax ${d.tax}%</span><b>${money(d.taxAmount)}</b></div><div class="sumrow grand"><span>Grand Total</span><strong>${money(d.grand)}</strong></div></div><p><b>Staff:</b> ${escapeHtml(d.staff||'-')}</p><p><b>Notes:</b> ${escapeHtml(d.notes||'-')}</p><div class="footer-note">Thank you. Visit again.</div>`;}
+function saveBill(){const d=data();if(!d.items.length){alert('Add at least one item');return}let bills=JSON.parse(localStorage.getItem('pssBills')||'[]');bills.unshift({...d,savedAt:new Date().toISOString()});localStorage.setItem('pssBills',JSON.stringify(bills.slice(0,100)));renderHistory();alert('Bill saved');}
+function renderHistory(){const bills=JSON.parse(localStorage.getItem('pssBills')||'[]');$('history').innerHTML=bills.length?bills.map((b,i)=>`<div class="history-item"><div><b>${escapeHtml(b.invoiceNo)}</b><span class="small">${escapeHtml(b.customer)} · ${b.billDate}</span></div><div style="text-align:right"><b>${money(b.grand)}</b><button class="btn ghost" onclick="loadBill(${i})" style="padding:7px 9px;margin-top:5px">Load</button></div></div>`).join(''):'<div class="small">No saved bills yet.</div>';}
+function loadBill(i){const b=JSON.parse(localStorage.getItem('pssBills')||'[]')[i];if(!b)return;$('invoiceNo').value=b.invoiceNo;$('billDate').value=b.billDate;$('customer').value=b.customer;$('mobile').value=b.mobile||'';$('payment').value=b.payment;$('tax').value=b.tax;$('discount').value=b.discount;$('staff').value=b.staff||'';$('notes').value=b.notes||'';items=b.items.length?b.items:[];renderItems();render();}
+function clearHistory(){if(confirm('Delete all saved bills from this phone?')){localStorage.removeItem('pssBills');renderHistory();}}
+function newBill(){if(!confirm('Start new bill? Unsaved entry will clear.'))return;items=[];$('invoiceNo').value=invNo();$('billDate').value=today();$('customer').value='';$('mobile').value='';$('payment').value='Cash';$('tax').value=0;$('discount').value=0;$('staff').value='';$('notes').value='';addRow();renderItems();render();}
+async function shareBill(){const d=data();const text=`Purple Signature Salon\nInvoice: ${d.invoiceNo}\nCustomer: ${d.customer}\nTotal: ${money(d.grand)}\nPayment: ${d.payment}`;if(navigator.share){await navigator.share({title:'PSS Bill',text}).catch(()=>{});}else{navigator.clipboard.writeText(text);alert('Bill text copied');}}
+function escapeHtml(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));}
+init();
+</script>
+</body>
+</html>
