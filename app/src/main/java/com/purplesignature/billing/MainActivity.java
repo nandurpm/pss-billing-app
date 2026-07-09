@@ -41,12 +41,7 @@ public class MainActivity extends Activity {
 
         webView.addJavascriptInterface(new PrintBridge(), "NativePrint");
         webView.setWebViewClient(new WebViewClient());
-        webView.setWebChromeClient(new WebChromeClient() {
-            @Override
-            public void onPrintRequest(WebView view) {
-                printCurrentBill();
-            }
-        });
+        webView.setWebChromeClient(new WebChromeClient());
         setContentView(webView);
 
         webView.loadUrl("file:///android_asset/www/index.html");
