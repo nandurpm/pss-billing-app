@@ -1,4 +1,3 @@
-const ADMIN_USER = 'ps';
 const ADMIN_PASS = '123';
 const DB_NAME = 'PSS_BILLING_DB';
 const DB_VERSION = 1;
@@ -27,11 +26,12 @@ let db = null;
 let settings = loadSettings();
 let items = [];
 let dirty = false;
-let adminOK = false;
+let adminOK = sessionStorage.getItem('pssAdminUnlocked') === '1';
 
 function loadSettings() {
   try {
-    return { ...DEFAULT_SETTINGS, ...JSON.parse(localStorage.getItem('pssSettings') || '{}') };
+    const saved = JSON.parse(localStorage.getItem('pssSettings') || '{}');
+    return { ...DEFAULT_SETTINGS, ...saved, services: Array.isArray(saved.services) && saved.services.length ? saved.services : DEFAULT_SETTINGS.services };
   } catch (e) {
     return JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
   }
@@ -47,10 +47,10 @@ function openDB() {
     req.onupgradeneeded = event => {
       const database = event.target.result;
       if (!database.objectStoreNames.contains('bills')) {
-        const store = database.createObjectStore('bills', { keyPath: 'invoiceNo' });
-        store.createIndex('billDate', 'billDate', { unique: false });
-        store.createIndex('mobile', 'mobile', { unique: false });
-        store.createIndex('savedAt', 'savedAt', { unique: false });
+        const billStore = database.createObjectStore('bills', { keyPath: 'invoiceNo' });
+        billStore.createIndex('billDate', 'billDate', { unique: false });
+        billStore.createIndex('mobile', 'mobile', { unique: false });
+        billStore.createIndex('savedAt', 'savedAt', { unique: false });
       }
     };
     req.onsuccess = event => { db = event.target.result; resolve(db); };
@@ -58,13 +58,13 @@ function openDB() {
   });
 }
 
-function store(name, mode = 'readonly') {
-  return db.transaction(name, mode).objectStore(name);
+function billStore(mode = 'readonly') {
+  return db.transaction('bills', mode).objectStore('bills');
 }
 
 function putBill(bill) {
   return new Promise((resolve, reject) => {
-    const req = store('bills', 'readwrite').put(bill);
+    const req = billStore('readwrite').put(bill);
     req.onsuccess = () => resolve();
     req.onerror = () => reject(req.error);
   });
@@ -72,7 +72,7 @@ function putBill(bill) {
 
 function allBills() {
   return new Promise((resolve, reject) => {
-    const req = store('bills').getAll();
+    const req = billStore().getAll();
     req.onsuccess = () => resolve(req.result || []);
     req.onerror = () => reject(req.error);
   });
@@ -80,7 +80,7 @@ function allBills() {
 
 function removeBill(id) {
   return new Promise((resolve, reject) => {
-    const req = store('bills', 'readwrite').delete(id);
+    const req = billStore('readwrite').delete(id);
     req.onsuccess = () => resolve();
     req.onerror = () => reject(req.error);
   });
@@ -123,6 +123,7 @@ function bindInputs() {
   $('searchBox').addEventListener('input', renderHistory);
   $('searchDate').addEventListener('input', renderHistory);
   $('qrFile').addEventListener('change', readQrFile);
+  $('adminPass').addEventListener('keydown', e => { if (e.key === 'Enter') adminLogin(); });
 }
 
 async function init() {
@@ -133,12 +134,12 @@ async function init() {
   $('billDate').value = today();
   renderServiceButtons();
   selectService(0);
-  addSelectedItem();
   tick();
   setInterval(tick, 1000);
   renderItems();
   renderInvoice();
   renderHistory();
+  if (adminOK) showAdminPanel();
 }
 
 function renderServiceButtons() {
@@ -179,7 +180,7 @@ function removeItem(index) {
 }
 
 function renderItems() {
-  $('items').innerHTML = items.map((item, index) => `
+  $('items').innerHTML = items.length ? items.map((item, index) => `
     <tr>
       <td><input value="${safe(item.name)}" oninput="items[${index}].name=this.value;dirty=true;renderInvoice()"></td>
       <td><input type="number" min="1" value="${item.qty}" oninput="items[${index}].qty=Number(this.value)||1;dirty=true;renderInvoice()"></td>
@@ -187,7 +188,7 @@ function renderItems() {
       <td class="num"><b>${money((Number(item.qty) || 0) * (Number(item.rate) || 0))}</b></td>
       <td><button class="btn danger small" onclick="removeItem(${index})">×</button></td>
     </tr>
-  `).join('');
+  `).join('') : '<tr><td colspan="5" class="small">No items added.</td></tr>';
 }
 
 function totals() {
@@ -227,7 +228,7 @@ function renderInvoice() {
     <p><b>Customer:</b> ${safe(bill.customer)} ${bill.mobile ? '· ' + safe(bill.mobile) : ''}</p>
     <table><thead><tr><th>Item</th><th>Qty</th><th>Rate</th><th>Total</th></tr></thead><tbody>${bill.items.map(item => `
       <tr><td>${safe(item.name)}</td><td class="num">${item.qty}</td><td class="num">${money(item.rate)}</td><td class="num">${money((Number(item.qty)||0)*(Number(item.rate)||0))}</td></tr>
-    `).join('')}</tbody></table>
+    `).join('') || '<tr><td colspan="4" class="small">No items added.</td></tr>'}</tbody></table>
     <div class="summary">
       <div class="sumrow"><span>Subtotal</span><b>${money(bill.subtotal)}</b></div>
       <div class="sumrow"><span>Discount</span><b>${money(bill.discount)}</b></div>
@@ -278,12 +279,13 @@ async function renderHistory() {
   if (query) bills = bills.filter(bill => [bill.invoiceNo, bill.customer, bill.mobile, bill.payment, bill.staff].join(' ').toLowerCase().includes(query));
   if (date) bills = bills.filter(bill => bill.billDate === date);
   $('billCount').textContent = bills.length + ' bill' + (bills.length === 1 ? '' : 's');
-  $('history').innerHTML = bills.length ? bills.slice(0, 500).map(bill => `
+  const shown = bills.slice(0, 300);
+  $('history').innerHTML = shown.length ? shown.map(bill => `
     <div class="historyItem">
       <div class="historyTop"><div><b>${safe(bill.invoiceNo)}</b><div class="small">${safe(bill.customer)} · ${safe(bill.mobile || 'No mobile')}</div><div class="small">${safe(bill.billDate)} · ${safe(bill.payment)}</div></div><div class="num"><b>${money(bill.grand)}</b></div></div>
       <div class="actions history-actions"><button class="btn ghost small" onclick="loadBill('${safe(bill.invoiceNo)}')">Load</button><button class="btn danger small" onclick="deleteBill('${safe(bill.invoiceNo)}')">Delete</button></div>
     </div>
-  `).join('') : '<div class="small">No saved bills found.</div>';
+  `).join('') + (bills.length > shown.length ? '<div class="small">Showing latest 300 results. Use search/date filter to narrow older bills.</div>' : '') : '<div class="small">No saved bills found.</div>';
 }
 
 async function loadBill(id) {
@@ -334,44 +336,31 @@ async function exportBills() {
   const blob = new Blob([JSON.stringify({ settings, bills }, null, 2)], { type: 'application/json' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
-  link.download = 'pss-billing-backup-' + today() + '.json';
+  link.download = 'purple-signature-billing-backup-' + today() + '.json';
   link.click();
   URL.revokeObjectURL(link.href);
 }
 
-function openAdmin() {
-  $('adminModal').classList.add('show');
-  $('adminPass').value = '';
-  if (adminOK) showAdminPanel();
-  else {
-    $('loginBox').classList.remove('hidden');
-    $('adminPanel').classList.add('hidden');
-  }
-}
-
-function closeAdmin() {
-  $('adminModal').classList.remove('show');
-}
-
 function adminLogin() {
-  if ($('adminUser').value === ADMIN_USER && $('adminPass').value === ADMIN_PASS) {
+  if ($('adminPass').value === ADMIN_PASS) {
     adminOK = true;
+    sessionStorage.setItem('pssAdminUnlocked', '1');
+    $('adminPass').value = '';
     showAdminPanel();
   } else {
-    alert('Wrong username or password.');
+    alert('Wrong admin password.');
   }
 }
 
 function adminLogout() {
   adminOK = false;
-  $('adminUser').value = '';
-  $('adminPass').value = '';
-  $('loginBox').classList.remove('hidden');
+  sessionStorage.removeItem('pssAdminUnlocked');
+  $('adminLock').classList.remove('hidden');
   $('adminPanel').classList.add('hidden');
 }
 
 function showAdminPanel() {
-  $('loginBox').classList.add('hidden');
+  $('adminLock').classList.add('hidden');
   $('adminPanel').classList.remove('hidden');
   $('setBusiness').value = settings.businessName || '';
   $('setTagline').value = settings.tagline || '';
@@ -409,9 +398,11 @@ function saveSettingsFromAdmin() {
   settings.gst = $('setGst').value.trim();
   settings.address = $('setAddress').value.trim();
   settings.services = settings.services.filter(service => service.name.trim()).map(service => ({ name: service.name.trim(), rate: Number(service.rate) || 0 }));
+  if (!settings.services.length) settings.services = DEFAULT_SETTINGS.services.slice();
   storeSettings();
   applyBrand();
   renderServiceButtons();
+  renderServiceAdmin();
   renderInvoice();
   alert('Admin settings saved.');
 }
@@ -419,6 +410,11 @@ function saveSettingsFromAdmin() {
 function readQrFile(event) {
   const file = event.target.files && event.target.files[0];
   if (!file) return;
+  if (file.size > 350000) {
+    alert('QR image is too large. Use a smaller QR screenshot.');
+    event.target.value = '';
+    return;
+  }
   const reader = new FileReader();
   reader.onload = () => {
     settings.qr = reader.result;
