@@ -1,8 +1,8 @@
 package com.purplesignature.billing;
 
 import android.app.Activity;
+import android.graphics.Color;
 import android.os.Bundle;
-import android.view.View;
 import android.view.Window;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
@@ -17,11 +17,11 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
 
+        Window window = getWindow();
+        window.setStatusBarColor(Color.parseColor("#2A063C"));
+        window.setNavigationBarColor(Color.parseColor("#170021"));
+
         webView = new WebView(this);
-        webView.setSystemUiVisibility(
-                View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                        | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                        | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN);
 
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
