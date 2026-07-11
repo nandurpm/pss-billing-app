@@ -1,1 +1,1 @@
-Final build trigger for Purple Signature Salon v2.0 with Billing, Reports, Settings and data migration.
+Build trigger for Purple Signature Salon v2.0.2: fitted banner, hidden time, unique invoice sequence, NIVETHA name, and today's totals.
