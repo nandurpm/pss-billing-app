@@ -46,6 +46,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 
 public class MainActivity extends Activity {
+    private static final int PDF_W = 595;
+    private static final int PDF_H = 842;
     private WebView webView;
     private Bitmap cachedBannerBitmap;
 
@@ -120,9 +122,9 @@ public class MainActivity extends Activity {
         PdfDocument document = new PdfDocument();
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         try {
-            PdfDocument.PageInfo pageInfo = new PdfDocument.PageInfo.Builder(595, 842, 1).create();
+            PdfDocument.PageInfo pageInfo = new PdfDocument.PageInfo.Builder(PDF_W, PDF_H, 1).create();
             PdfDocument.Page page = document.startPage(pageInfo);
-            drawBill(page.getCanvas(), root, 595, 842, false);
+            drawBillAtPdfScale(page.getCanvas(), root, 1f);
             document.finishPage(page);
             document.writeTo(out);
             return out.toByteArray();
@@ -234,9 +236,11 @@ public class MainActivity extends Activity {
         try {
             JSONObject root = new JSONObject(payloadJson);
             JSONObject bill = root.getJSONObject("bill");
-            Bitmap bitmap = Bitmap.createBitmap(1080, 1500, Bitmap.Config.ARGB_8888);
+            int imageWidth = 1080;
+            int imageHeight = Math.round(imageWidth * (PDF_H / (float) PDF_W));
+            Bitmap bitmap = Bitmap.createBitmap(imageWidth, imageHeight, Bitmap.Config.ARGB_8888);
             Canvas canvas = new Canvas(bitmap);
-            drawBill(canvas, root, 1080, 1500, true);
+            drawBillAtPdfScale(canvas, root, imageWidth / (float) PDF_W);
 
             String imageName = cleanFileName("Purple_Signature_" + bill.optString("invoiceNo", "Bill") + ".jpg");
             Uri uri = saveImageToMediaStore(bitmap, imageName);
@@ -292,84 +296,89 @@ public class MainActivity extends Activity {
         }
     }
 
-    private void drawBill(Canvas canvas, JSONObject root, int pageWidth, int pageHeight, boolean imageMode) throws Exception {
+    private void drawBillAtPdfScale(Canvas canvas, JSONObject root, float scale) throws Exception {
+        canvas.save();
+        canvas.scale(scale, scale);
+        drawBillBase(canvas, root);
+        canvas.restore();
+    }
+
+    private void drawBillBase(Canvas canvas, JSONObject root) throws Exception {
         JSONObject bill = root.getJSONObject("bill");
         JSONObject shop = root.getJSONObject("settings");
-        float scale = imageMode ? (pageWidth / 595f) : 1f;
-        float margin = imageMode ? 54f : 32f;
         Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
         paint.setColor(Color.WHITE);
-        canvas.drawRect(0, 0, pageWidth, pageHeight, paint);
+        canvas.drawRect(0, 0, PDF_W, PDF_H, paint);
 
+        float margin = 32f;
         Bitmap banner = loadBannerBitmap();
-        float bannerTop = imageMode ? 32f : 20f;
-        float bannerHeight = imageMode ? 260f : 120f;
-        RectF bannerRect = new RectF(margin, bannerTop, pageWidth - margin, bannerTop + bannerHeight);
-        if (banner != null) drawBitmapCrop(canvas, banner, bannerRect, paint);
-        else {
+        RectF bannerRect = new RectF(margin, 20f, PDF_W - margin, 140f);
+        if (banner != null) {
+            drawBitmapCrop(canvas, banner, bannerRect, paint);
+        } else {
             paint.setColor(Color.rgb(42, 6, 60));
             canvas.drawRect(bannerRect, paint);
             paint.setColor(Color.WHITE);
-            paint.setTextSize(24f * scale);
+            paint.setTextSize(24f);
             paint.setFakeBoldText(true);
-            canvas.drawText("Purple Signature Salon", margin + 10f * scale, bannerTop + 56f * scale, paint);
+            canvas.drawText("Purple Signature Salon", margin + 10f, 78f, paint);
             paint.setFakeBoldText(false);
         }
 
-        float y = bannerRect.bottom + 30f * scale;
+        float y = 178f;
         paint.setColor(Color.rgb(36, 17, 47));
-        paint.setTextSize(13f * scale);
+        paint.setTextSize(13f);
         paint.setFakeBoldText(true);
         canvas.drawText("Invoice", margin, y, paint);
         paint.setFakeBoldText(false);
-        canvas.drawText(bill.optString("invoiceNo", ""), margin + 70f * scale, y, paint);
+        canvas.drawText(bill.optString("invoiceNo", ""), margin + 70f, y, paint);
         paint.setFakeBoldText(true);
-        canvas.drawText("Date", pageWidth - margin - 180f * scale, y, paint);
+        canvas.drawText("Date", 390f, y, paint);
         paint.setFakeBoldText(false);
-        canvas.drawText(bill.optString("billDate", ""), pageWidth - margin - 130f * scale, y, paint);
+        canvas.drawText(bill.optString("billDate", ""), 438f, y, paint);
 
-        y += 28f * scale;
+        y += 28f;
         paint.setFakeBoldText(true);
         canvas.drawText("Customer", margin, y, paint);
         paint.setFakeBoldText(false);
-        canvas.drawText(limit(bill.optString("customer", "Walk-in Customer"), imageMode ? 32 : 36), margin + 82f * scale, y, paint);
+        canvas.drawText(limit(bill.optString("customer", "Walk-in Customer"), 36), margin + 82f, y, paint);
         paint.setFakeBoldText(true);
-        canvas.drawText("Mobile", pageWidth - margin - 180f * scale, y, paint);
+        canvas.drawText("Mobile", 390f, y, paint);
         paint.setFakeBoldText(false);
-        canvas.drawText(limit(bill.optString("mobile", ""), 18), pageWidth - margin - 130f * scale, y, paint);
+        canvas.drawText(limit(bill.optString("mobile", ""), 18), 438f, y, paint);
 
-        y += 40f * scale;
+        y += 42f;
         float tableLeft = margin;
-        float tableRight = pageWidth - margin;
-        float itemX = tableLeft + 8f * scale;
-        float qtyX = tableLeft + (imageMode ? 555f : 268f) * scale;
-        float rateX = tableLeft + (imageMode ? 700f : 333f) * scale;
-        float totalX = tableLeft + (imageMode ? 870f : 433f) * scale;
-        float rowH = 28f * scale;
+        float tableRight = PDF_W - margin;
+        float itemX = tableLeft + 8f;
+        float qtyX = 300f;
+        float rateX = 365f;
+        float totalX = 465f;
+        float rowH = 28f;
 
         paint.setColor(Color.rgb(42, 6, 60));
-        canvas.drawRect(tableLeft, y - 20f * scale, tableRight, y + 8f * scale, paint);
+        canvas.drawRect(tableLeft, y - 20f, tableRight, y + 8f, paint);
         paint.setColor(Color.WHITE);
         paint.setFakeBoldText(true);
-        paint.setTextSize(12f * scale);
+        paint.setTextSize(12f);
         canvas.drawText("Item", itemX, y, paint);
         canvas.drawText("Qty", qtyX, y, paint);
         canvas.drawText("Rate", rateX, y, paint);
         canvas.drawText("Total", totalX, y, paint);
         paint.setFakeBoldText(false);
 
-        y += 32f * scale;
+        y += 32f;
         JSONArray itemArray = bill.optJSONArray("items");
-        int maxRows = imageMode ? 18 : 12;
+        int maxRows = 12;
         if (itemArray != null && itemArray.length() > 0) {
             for (int i = 0; i < itemArray.length() && i < maxRows; i++) {
                 JSONObject item = itemArray.getJSONObject(i);
                 paint.setColor(i % 2 == 0 ? Color.rgb(251, 246, 255) : Color.WHITE);
-                canvas.drawRect(tableLeft, y - 18f * scale, tableRight, y + 8f * scale, paint);
+                canvas.drawRect(tableLeft, y - 18f, tableRight, y + 8f, paint);
                 paint.setColor(Color.rgb(36, 17, 47));
-                paint.setTextSize(12f * scale);
-                String name = limit(item.optString("name", "Item"), imageMode ? 35 : 32);
+                paint.setTextSize(12f);
+                String name = limit(item.optString("name", "Item"), 32);
                 double qty = item.optDouble("qty", 1);
                 double rate = item.optDouble("rate", 0);
                 double total = qty * rate;
@@ -380,7 +389,7 @@ public class MainActivity extends Activity {
                 y += rowH;
             }
             if (itemArray.length() > maxRows) {
-                paint.setTextSize(11f * scale);
+                paint.setTextSize(11f);
                 canvas.drawText("More items available in saved bill view...", itemX, y, paint);
                 y += rowH;
             }
@@ -390,55 +399,59 @@ public class MainActivity extends Activity {
             y += rowH;
         }
 
-        y += 24f * scale;
-        float summaryW = imageMode ? 430f : 235f;
-        float summaryX = pageWidth - margin - summaryW;
-        drawSummaryRow(canvas, paint, summaryX, y, summaryW, "Subtotal", formatMoney(bill.optDouble("subtotal", 0)), false, scale); y += 30f * scale;
-        drawSummaryRow(canvas, paint, summaryX, y, summaryW, "Discount", formatMoney(bill.optDouble("discount", 0)), false, scale); y += 30f * scale;
-        drawSummaryRow(canvas, paint, summaryX, y, summaryW, "Grand Total", formatMoney(bill.optDouble("grand", 0)), true, scale);
+        y += 24f;
+        float summaryW = 235f;
+        float summaryX = PDF_W - margin - summaryW;
+        drawSummaryRow(canvas, paint, summaryX, y, summaryW, "Subtotal", formatMoney(bill.optDouble("subtotal", 0)), false); y += 30f;
+        drawSummaryRow(canvas, paint, summaryX, y, summaryW, "Discount", formatMoney(bill.optDouble("discount", 0)), false); y += 30f;
+        double tax = bill.optDouble("tax", 0);
+        if (tax > 0.001) {
+            drawSummaryRow(canvas, paint, summaryX, y, summaryW, "Tax " + tax + "%", formatMoney(bill.optDouble("taxAmount", 0)), false);
+            y += 30f;
+        }
+        drawSummaryRow(canvas, paint, summaryX, y, summaryW, "Grand Total", formatMoney(bill.optDouble("grand", 0)), true);
 
-        float bottomY = imageMode ? pageHeight - 210f : pageHeight - 130f;
+        float bottomY = 712f;
         paint.setColor(Color.rgb(36, 17, 47));
-        paint.setTextSize(12f * scale);
+        paint.setTextSize(12f);
         paint.setFakeBoldText(true);
         canvas.drawText("Payment:", margin, bottomY, paint);
         paint.setFakeBoldText(false);
-        canvas.drawText(bill.optString("payment", "Cash"), margin + 70f * scale, bottomY, paint);
-        bottomY += 26f * scale;
+        canvas.drawText(bill.optString("payment", "Cash"), margin + 70f, bottomY, paint);
+        bottomY += 26f;
         paint.setFakeBoldText(true);
         canvas.drawText("Staff:", margin, bottomY, paint);
         paint.setFakeBoldText(false);
-        canvas.drawText(limit(bill.optString("staff", "-"), 35), margin + 70f * scale, bottomY, paint);
-        bottomY += 26f * scale;
+        canvas.drawText(limit(bill.optString("staff", "-"), 35), margin + 70f, bottomY, paint);
+        bottomY += 26f;
         paint.setFakeBoldText(true);
         canvas.drawText("Notes:", margin, bottomY, paint);
         paint.setFakeBoldText(false);
-        canvas.drawText(limit(bill.optString("notes", "-"), imageMode ? 58 : 64), margin + 70f * scale, bottomY, paint);
+        canvas.drawText(limit(bill.optString("notes", "-"), 64), margin + 70f, bottomY, paint);
 
         Bitmap qrBitmap = decodeDataUri(shop.optString("qr", ""));
         if (qrBitmap != null) {
-            float qrSize = imageMode ? 150f : 75f;
-            RectF qrRect = new RectF(margin, pageHeight - margin - qrSize, margin + qrSize, pageHeight - margin);
+            RectF qrRect = new RectF(margin, 770f, margin + 62f, 832f);
             canvas.drawBitmap(qrBitmap, null, qrRect, paint);
-            paint.setTextSize(10f * scale);
-            canvas.drawText("Scan to pay", margin, pageHeight - margin + (imageMode ? 24f : 12f), paint);
+            paint.setTextSize(8f);
+            canvas.drawText("Scan to pay", margin, 839f, paint);
         }
 
-        paint.setTextSize(12f * scale);
+        paint.setTextSize(12f);
         paint.setColor(Color.rgb(115, 92, 122));
         paint.setTextAlign(Paint.Align.CENTER);
-        canvas.drawText("Thank you. Visit again.", pageWidth / 2f, pageHeight - margin, paint);
+        canvas.drawText("Thank you. Visit again.", PDF_W / 2f, 824f, paint);
         paint.setTextAlign(Paint.Align.LEFT);
     }
 
-    private void drawSummaryRow(Canvas canvas, Paint paint, float x, float y, float width, String label, String value, boolean grand, float scale) {
+    private void drawSummaryRow(Canvas canvas, Paint paint, float x, float y, float width, String label, String value, boolean grand) {
         paint.setColor(grand ? Color.rgb(123, 36, 143) : Color.rgb(251, 246, 255));
-        canvas.drawRect(x, y - 18f * scale, x + width, y + 8f * scale, paint);
+        canvas.drawRect(x, y - 18f, x + width, y + 8f, paint);
         paint.setColor(grand ? Color.WHITE : Color.rgb(36, 17, 47));
-        paint.setTextSize((grand ? 13f : 12f) * scale);
+        paint.setTextSize(grand ? 13f : 12f);
         paint.setFakeBoldText(grand);
-        canvas.drawText(label, x + 8f * scale, y, paint);
-        canvas.drawText(value, x + width - 122f * scale, y, paint);
+        canvas.drawText(label, x + 8f, y, paint);
+        canvas.drawText(value, x + width - 118f, y, paint);
         paint.setFakeBoldText(false);
     }
 
