@@ -69,11 +69,15 @@ public class MainActivity extends Activity {
         webSettings.setDatabaseEnabled(true);
         webSettings.setAllowFileAccess(true);
         webSettings.setAllowContentAccess(true);
-        webSettings.setLoadWithOverviewMode(true);
+        webSettings.setLoadWithOverviewMode(false);
         webSettings.setUseWideViewPort(true);
+        webSettings.setSupportZoom(false);
         webSettings.setBuiltInZoomControls(false);
         webSettings.setDisplayZoomControls(false);
+        webSettings.setTextZoom(100);
 
+        webView.setHorizontalScrollBarEnabled(false);
+        webView.setOverScrollMode(WebView.OVER_SCROLL_NEVER);
         webView.addJavascriptInterface(new PdfBridge(), "NativePdf");
         webView.addJavascriptInterface(new ShareBridge(), "NativeShare");
         webView.addJavascriptInterface(new ReportBridge(), "NativeReport");
