@@ -1,1 +1,1 @@
-Build trigger after WhatsApp bill image layout matches PDF and logo banner rendering fix.
+Build trigger after original logo data and PDF-matching WhatsApp bill image fix.
