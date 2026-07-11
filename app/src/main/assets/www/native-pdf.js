@@ -3,8 +3,9 @@
     var d = new Date();
     return String(d.getDate()).padStart(2,'0') + String(d.getMonth()+1).padStart(2,'0') + d.getFullYear() + '-' + String(d.getHours()).padStart(2,'0') + '_' + String(d.getMinutes()).padStart(2,'0');
   }
-
   window.makeInvoiceNo = invoiceNoNow;
+
+  function bannerSrc(){ return window.PSS_ORIGINAL_BANNER || 'banner.svg'; }
 
   function settingsSnapshot(){
     return {
@@ -13,7 +14,8 @@
       phone: settings.phone || '',
       address: settings.address || '',
       qr: settings.qr || '',
-      gst: ''
+      gst: '',
+      bannerData: window.PSS_ORIGINAL_BANNER || ''
     };
   }
 
@@ -28,14 +30,22 @@
 
   function money2(n){ return money(Number(n) || 0); }
 
-  function billHtml(bill, shop, forModal){
+  function applyOriginalBanner(){
+    var src = bannerSrc();
+    var top = document.querySelector('.topBanner img');
+    if (top) top.src = src;
+    document.querySelectorAll('.invoiceLogo img').forEach(function(img){ img.src = src; });
+  }
+
+  function billHtml(bill, shop){
     shop = shop || settingsSnapshot();
+    var logo = shop.bannerData || bannerSrc();
     var rows = (bill.items || []).map(function(item){
       var total = (Number(item.qty) || 0) * (Number(item.rate) || 0);
       return '<tr><td>' + safe(item.name) + '</td><td class="num">' + safe(item.qty) + '</td><td class="num">' + money2(item.rate) + '</td><td class="num">' + money2(total) + '</td></tr>';
     }).join('') || '<tr><td colspan="4" class="small">No items added.</td></tr>';
     var qr = shop.qr ? '<img class="qr" src="' + shop.qr + '" alt="Payment QR"><div class="footer-note">Scan to pay</div>' : '';
-    return '<div class="invoiceLogo"><img src="banner.svg" alt="Purple Signature Salon"></div>' +
+    return '<div class="invoiceLogo"><img src="' + logo + '" alt="Purple Signature Salon"></div>' +
       '<div class="invoiceHead"><div><h3>' + safe(shop.businessName || 'Purple Signature Salon') + '</h3><p>' + safe(shop.tagline || 'Skin · Hair · Bridal · Nails') + '</p><p>' + safe(shop.address || '') + '</p><p>' + safe(shop.phone || '') + '</p></div>' +
       '<div class="num"><p><b>Invoice</b></p><p>' + safe(bill.invoiceNo || '') + '</p><p>' + safe(bill.billDate || '') + '</p></div></div>' +
       '<p><b>Customer:</b> ' + safe(bill.customer || 'Walk-in Customer') + (bill.mobile ? ' · ' + safe(bill.mobile) : '') + '</p>' +
@@ -49,30 +59,20 @@
 
   window.renderInvoice = function(){
     var bill = cleanBillData();
-    $('invoicePreview').innerHTML = billHtml(bill, settingsSnapshot(), false);
+    $('invoicePreview').innerHTML = billHtml(bill, settingsSnapshot());
+    applyOriginalBanner();
   };
 
   function hideTaxAndGst(){
     var tax = $('tax');
-    if (tax) {
-      tax.value = 0;
-      var field = tax.closest('.field');
-      if (field) field.style.display = 'none';
-    }
+    if (tax) { tax.value = 0; var field = tax.closest('.field'); if (field) field.style.display = 'none'; }
     var gst = $('setGst');
-    if (gst) {
-      gst.value = '';
-      var gstField = gst.closest('.field');
-      if (gstField) gstField.style.display = 'none';
-    }
+    if (gst) { gst.value = ''; var gstField = gst.closest('.field'); if (gstField) gstField.style.display = 'none'; }
   }
 
   window.saveBill = async function(){
     var bill = cleanBillData();
-    if (!bill.items.length) {
-      alert('Add at least one service or product.');
-      return;
-    }
+    if (!bill.items.length) { alert('Add at least one service or product.'); return; }
     await putBill(bill);
     dirty = false;
     await renderHistory();
@@ -106,31 +106,22 @@
     document.body.appendChild(modal);
   }
 
-  window.closeSavedBill = function(){
-    var modal = document.getElementById('billViewModal');
-    if (modal) modal.classList.add('hidden');
-  };
-
+  window.closeSavedBill = function(){ var modal = document.getElementById('billViewModal'); if (modal) modal.classList.add('hidden'); };
   var viewedBill = null;
+
   window.viewSavedBill = async function(id){
     ensureBillModal();
     var bills = await allBills();
     viewedBill = bills.find(function(b){ return b.invoiceNo === id; });
     if (!viewedBill) return;
     var shop = viewedBill.settingsSnapshot || settingsSnapshot();
-    document.getElementById('savedBillInvoice').innerHTML = billHtml(viewedBill, shop, true);
+    if (!shop.bannerData) shop.bannerData = window.PSS_ORIGINAL_BANNER || '';
+    document.getElementById('savedBillInvoice').innerHTML = billHtml(viewedBill, shop);
     document.getElementById('billViewModal').classList.remove('hidden');
   };
 
-  window.printViewedBill = function(){
-    if (!viewedBill) return;
-    sendPdf(viewedBill, viewedBill.settingsSnapshot || settingsSnapshot());
-  };
-
-  window.shareViewedBill = function(){
-    if (!viewedBill) return;
-    sendShare(viewedBill, viewedBill.settingsSnapshot || settingsSnapshot());
-  };
+  window.printViewedBill = function(){ if (viewedBill) sendPdf(viewedBill, viewedBill.settingsSnapshot || settingsSnapshot()); };
+  window.shareViewedBill = function(){ if (viewedBill) sendShare(viewedBill, viewedBill.settingsSnapshot || settingsSnapshot()); };
 
   window.renderHistory = async function(){
     var query = $('searchBox').value.trim().toLowerCase();
@@ -147,44 +138,27 @@
   };
 
   function payloadFor(bill, shop){
-    return JSON.stringify({ bill: bill, settings: shop || settingsSnapshot() });
+    shop = shop || settingsSnapshot();
+    if (!shop.bannerData) shop.bannerData = window.PSS_ORIGINAL_BANNER || '';
+    return JSON.stringify({ bill: bill, settings: shop });
   }
 
   function sendPdf(bill, shop){
-    if (window.NativePdf && typeof window.NativePdf.savePdf === 'function') {
-      window.NativePdf.savePdf(payloadFor(bill, shop));
-    } else if (typeof buildPrintableBillHtml === 'function') {
-      var popup = window.open('', '_blank');
-      if (popup) {
-        popup.document.open();
-        popup.document.write(buildPrintableBillHtml());
-        popup.document.close();
-        popup.focus();
-        popup.print();
-      } else window.print();
-    } else window.print();
+    if (window.NativePdf && typeof window.NativePdf.savePdf === 'function') window.NativePdf.savePdf(payloadFor(bill, shop));
+    else alert('PDF works in Android APK.');
   }
 
   function sendShare(bill, shop){
-    if (window.NativeShare && typeof window.NativeShare.shareBill === 'function') {
-      window.NativeShare.shareBill(payloadFor(bill, shop));
-    } else {
-      alert('Bill image sharing works only in the Android APK.');
-    }
+    if (window.NativeShare && typeof window.NativeShare.shareBill === 'function') window.NativeShare.shareBill(payloadFor(bill, shop));
+    else alert('Bill image sharing works only in the Android APK.');
   }
 
-  window.printBill = function(){
-    if (typeof renderInvoice === 'function') renderInvoice();
-    sendPdf(cleanBillData(), settingsSnapshot());
-  };
-
-  window.shareBill = function(){
-    if (typeof renderInvoice === 'function') renderInvoice();
-    sendShare(cleanBillData(), settingsSnapshot());
-  };
+  window.printBill = function(){ if (typeof renderInvoice === 'function') renderInvoice(); sendPdf(cleanBillData(), settingsSnapshot()); };
+  window.shareBill = function(){ if (typeof renderInvoice === 'function') renderInvoice(); sendShare(cleanBillData(), settingsSnapshot()); };
 
   setTimeout(function(){
     hideTaxAndGst();
+    applyOriginalBanner();
     if ($('invoiceNo') && $('invoiceNo').value.indexOf('PSS-') === 0) $('invoiceNo').value = invoiceNoNow();
     renderInvoice();
     renderHistory();
