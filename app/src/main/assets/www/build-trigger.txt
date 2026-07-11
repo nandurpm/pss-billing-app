@@ -1,1 +1,1 @@
-Build trigger for Purple Signature Salon v2.1.0: repaired IndexedDB schema, collision-safe invoices, dynamic staff reports, secure PIN storage, validated mobile and discounts, and cleaned legacy assets.
+Final build trigger for Purple Signature Salon v2.1.0 after IndexedDB repair, deterministic invoice keys, dynamic staff reports, secure PIN storage, mobile validation, discount validation, native PDF/print, and WhatsApp image sharing fixes.
