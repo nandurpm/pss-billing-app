@@ -1,1 +1,1 @@
-Build trigger for Purple Signature Salon v2.0.2: fitted banner, hidden time, unique invoice sequence, NIVETHA name, and today's totals.
+Build trigger for Purple Signature Salon v2.1.0: repaired IndexedDB schema, collision-safe invoices, dynamic staff reports, secure PIN storage, validated mobile and discounts, and cleaned legacy assets.
