@@ -1,1 +1,1 @@
-Build trigger for Purple Signature Salon v2.0 sidebar billing reports settings APK.
+Final build trigger for Purple Signature Salon v2.0 with Billing, Reports, Settings and data migration.
