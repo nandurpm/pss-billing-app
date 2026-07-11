@@ -15,19 +15,22 @@
       <button class="nav-btn" data-page="reports"><span>▥</span>Reports</button>
       <button class="nav-btn" data-page="settings"><span>⚙</span>Settings</button>
     </nav>
-    <div class="side-foot">Purple Signature v2.0</div>
+    <div class="side-foot">Purple Signature v2.1</div>
   </aside>
 
   <div class="workspace">
     <header class="mobile-head">
-      <button class="menu-btn" id="menuBtn">☰</button>
+      <button class="menu-btn" id="menuBtn" aria-label="Open menu">☰</button>
       <img src="banner.svg" alt="Purple Signature Salon">
-      <span id="clock"></span>
     </header>
 
     <main>
       <section class="page active" id="page-billing">
-        <div class="page-head"><div><h1>Billing</h1><p>Create and manage salon bills</p></div><div class="date-chip" id="billingDateChip"></div></div>
+        <div class="page-head">
+          <div><h1>Billing</h1><p>Create and manage salon bills</p></div>
+          <div class="date-chip" id="billingDateChip"></div>
+        </div>
+
         <div class="billing-grid">
           <section class="card">
             <div class="section-head"><h2>Bill Entry</h2><span class="muted">Staff selection required</span></div>
@@ -35,7 +38,7 @@
               <label>Invoice No<input id="invoiceNo" readonly></label>
               <label>Date<input id="billDate" type="date"></label>
               <label>Customer Name<input id="customer" placeholder="Customer name"></label>
-              <label>Mobile No<input id="mobile" inputmode="tel" placeholder="10 digit mobile"></label>
+              <label>Mobile No<input id="mobile" inputmode="numeric" maxlength="12" placeholder="10 digit mobile"></label>
               <label>Staff<select id="staff"><option value="">Select staff</option></select></label>
               <label>Payment<select id="payment"><option value="CASH">Cash</option><option value="UPI">UPI / GPay</option><option value="CARD">Card</option><option value="CREDIT">Credit</option></select></label>
               <label>Discount ₹<input id="discount" type="number" min="0" value="0"></label>
@@ -51,7 +54,13 @@
               <button class="btn primary" id="addItemBtn">Add Item</button>
             </div>
 
-            <div class="table-wrap"><table><thead><tr><th>Item</th><th>Qty</th><th>Rate</th><th>Total</th><th></th></tr></thead><tbody id="itemsBody"></tbody></table></div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Item</th><th>Qty</th><th>Rate</th><th>Total</th><th></th></tr></thead>
+                <tbody id="itemsBody"></tbody>
+              </table>
+            </div>
+
             <div class="action-bar">
               <button class="btn primary" id="saveBillBtn">Save Bill</button>
               <button class="btn dark" id="printBillBtn">Print / PDF</button>
@@ -61,13 +70,25 @@
           </section>
 
           <aside class="right-col">
-            <section class="card"><div class="section-head"><h2>Invoice Preview</h2><span class="muted">Live</span></div><div class="invoice" id="invoicePreview"></div></section>
-            <section class="card"><div class="section-head"><h2>Saved Bills</h2><span class="muted" id="billCount">0 bills</span></div>
+            <section class="card">
+              <div class="section-head"><h2>Invoice Preview</h2><span class="muted">Live</span></div>
+              <div class="invoice" id="invoicePreview"></div>
+            </section>
+            <section class="card">
+              <div class="section-head"><h2>Saved Bills</h2><span class="muted" id="billCount">0 bills</span></div>
               <div class="search-row"><input id="billSearch" placeholder="Name / mobile / invoice"><input id="billSearchDate" type="date"></div>
               <div class="history" id="billHistory"></div>
             </section>
           </aside>
         </div>
+
+        <section class="card today-summary-card">
+          <div class="today-summary-head"><h2>Today's Billing Summary</h2><span id="todaySummaryDate"></span></div>
+          <div class="today-summary-grid">
+            <div class="today-summary-box"><span>Total Services</span><strong id="todayServiceTotal">0</strong></div>
+            <div class="today-summary-box"><span>Total Earnings</span><strong id="todayEarningsTotal">₹0.00</strong></div>
+          </div>
+        </section>
       </section>
 
       <section class="page" id="page-reports">
@@ -82,38 +103,98 @@
           </div>
           <div class="quick-filters"><button data-range="today">Today</button><button data-range="week">This Week</button><button data-range="month">This Month</button></div>
         </section>
+
         <div class="summary-grid" id="summaryCards"></div>
         <div class="report-grid">
-          <section class="card"><div class="section-head"><h2>Staff Work Report</h2></div><div class="table-wrap"><table><thead><tr><th>Staff</th><th>Bills</th><th>Services</th><th>Revenue</th><th>Cash</th><th>UPI</th><th>Top Service</th></tr></thead><tbody id="staffReportBody"></tbody></table></div></section>
+          <section class="card full-card">
+            <div class="section-head"><h2>Staff Work Report</h2></div>
+            <div class="table-wrap"><table><thead><tr><th>Staff</th><th>Bills</th><th>Services</th><th>Revenue</th><th>Cash</th><th>UPI</th><th>Top Service</th></tr></thead><tbody id="staffReportBody"></tbody></table></div>
+          </section>
           <section class="card"><div class="section-head"><h2>Payment Summary</h2></div><div id="paymentReport"></div></section>
-          <section class="card full-card"><div class="section-head"><h2>Service Analysis</h2></div><div class="table-wrap"><table><thead><tr><th>Service</th><th>Count</th><th>Quantity</th><th>Revenue</th><th>ABITHA</th><th>NIVEDA</th></tr></thead><tbody id="serviceReportBody"></tbody></table></div></section>
-          <section class="card full-card"><div class="section-head"><h2>Daily Analysis</h2></div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Bills</th><th>Services</th><th>Cash</th><th>UPI</th><th>Card</th><th>Credit</th><th>Total</th></tr></thead><tbody id="dailyReportBody"></tbody></table></div></section>
-          <section class="card full-card"><div class="section-head"><h2>Weekly Analysis</h2></div><div class="table-wrap"><table><thead><tr><th>Week</th><th>Bills</th><th>Services</th><th>Cash</th><th>UPI</th><th>Total</th></tr></thead><tbody id="weeklyReportBody"></tbody></table></div></section>
+          <section class="card"><div class="section-head"><h2>Bill Count Summary</h2></div><div id="billCountReport"></div></section>
+          <section class="card full-card">
+            <div class="section-head"><h2>Service Analysis</h2></div>
+            <div class="table-wrap"><table><thead><tr><th>Service</th><th>Count</th><th>Quantity</th><th>Revenue</th><th>Staff Breakdown</th></tr></thead><tbody id="serviceReportBody"></tbody></table></div>
+          </section>
+          <section class="card full-card">
+            <div class="section-head"><h2>Daily Analysis</h2></div>
+            <div class="table-wrap"><table><thead><tr><th>Date</th><th>Bills</th><th>Services</th><th>Cash</th><th>UPI</th><th>Card</th><th>Credit</th><th>Total</th></tr></thead><tbody id="dailyReportBody"></tbody></table></div>
+          </section>
+          <section class="card full-card">
+            <div class="section-head"><h2>Weekly Analysis</h2></div>
+            <div class="table-wrap"><table><thead><tr><th>Week</th><th>Bills</th><th>Services</th><th>Cash</th><th>UPI</th><th>Card</th><th>Credit</th><th>Total</th></tr></thead><tbody id="weeklyReportBody"></tbody></table></div>
+          </section>
         </div>
       </section>
 
       <section class="page" id="page-settings">
-        <div class="page-head"><div><h1>Settings</h1><p>Salon, staff, services, payment and backup controls</p></div></div>
+        <div class="page-head"><div><h1>Settings</h1><p>Salon, staff, services, security and backup controls</p></div></div>
         <section class="card settings-lock" id="settingsLock">
-          <h2>Admin Access</h2><p>Enter admin password to open settings.</p><div class="unlock-row"><input id="settingsPassword" type="password" inputmode="numeric" placeholder="Admin password"><button class="btn primary" id="unlockSettingsBtn">Unlock</button></div>
+          <h2>Admin Access</h2><p>Enter the admin PIN to open settings.</p>
+          <div class="unlock-row"><input id="settingsPassword" type="password" inputmode="numeric" maxlength="8" placeholder="Admin PIN"><button class="btn primary" id="unlockSettingsBtn">Unlock</button></div>
         </section>
+
         <div id="settingsPanel" class="hidden settings-grid">
-          <section class="card"><div class="section-head"><h2>Salon Details</h2><button class="btn primary small" id="saveSettingsBtn">Save</button></div>
-            <div class="form-grid"><label>Business Name<input id="setBusiness"></label><label>Tagline<input id="setTagline"></label><label>Phone<input id="setPhone"></label><label class="full">Address<textarea id="setAddress"></textarea></label><label class="full">Payment QR<input id="setQr" type="file" accept="image/*"></label></div><div id="qrPreview"></div>
+          <section class="card">
+            <div class="section-head"><h2>Salon Details</h2><button class="btn primary small" id="saveSettingsBtn">Save</button></div>
+            <div class="form-grid">
+              <label>Business Name<input id="setBusiness"></label>
+              <label>Tagline<input id="setTagline"></label>
+              <label>Phone<input id="setPhone"></label>
+              <label class="full">Address<textarea id="setAddress"></textarea></label>
+              <label class="full">Payment QR<input id="setQr" type="file" accept="image/*"></label>
+            </div>
+            <div id="qrPreview"></div>
           </section>
-          <section class="card"><div class="section-head"><h2>Staff</h2></div><div id="staffSettings"></div></section>
-          <section class="card full-card"><div class="section-head"><h2>Services & Rates</h2><button class="btn light small" id="addServiceSettingBtn">+ Add Service</button></div><div class="table-wrap"><table><thead><tr><th>Service</th><th>Category</th><th>Rate</th><th>Active</th><th></th></tr></thead><tbody id="serviceSettingsBody"></tbody></table></div></section>
-          <section class="card"><div class="section-head"><h2>Tax / GST</h2></div><label class="switch-row"><input id="gstEnabled" type="checkbox"><span>Enable GST</span></label><label>GST %<input id="gstPercent" type="number" min="0" value="0"></label><p class="muted">GST is OFF by default and hidden from bills while disabled.</p></section>
-          <section class="card"><div class="section-head"><h2>Backup & Restore</h2></div><div class="stack"><button class="btn light" id="exportBackupBtn">Export All Data</button><label class="btn light file-btn">Import Backup<input id="importBackup" type="file" accept="application/json"></label><button class="btn danger" id="lockSettingsBtn">Lock Settings</button></div></section>
+
+          <section class="card"><div class="section-head"><h2>Staff</h2></div><div id="staffSettings"></div><button class="btn light small" id="addStaffBtn">+ Add Staff</button></section>
+
+          <section class="card full-card">
+            <div class="section-head"><h2>Services & Rates</h2><button class="btn light small" id="addServiceSettingBtn">+ Add Service</button></div>
+            <div class="table-wrap"><table><thead><tr><th>Service</th><th>Category</th><th>Rate</th><th>Active</th><th></th></tr></thead><tbody id="serviceSettingsBody"></tbody></table></div>
+          </section>
+
+          <section class="card">
+            <div class="section-head"><h2>Tax / GST</h2></div>
+            <label class="switch-row"><input id="gstEnabled" type="checkbox"><span>Enable GST</span></label>
+            <label>GST %<input id="gstPercent" type="number" min="0" max="100" value="0"></label>
+            <p class="muted">GST is hidden from bills while disabled.</p>
+          </section>
+
+          <section class="card">
+            <div class="section-head"><h2>Change Admin PIN</h2></div>
+            <div class="stack">
+              <input id="currentAdminPin" type="password" inputmode="numeric" maxlength="8" placeholder="Current PIN">
+              <input id="newAdminPin" type="password" inputmode="numeric" maxlength="8" placeholder="New PIN (4–8 digits)">
+              <input id="confirmAdminPin" type="password" inputmode="numeric" maxlength="8" placeholder="Confirm new PIN">
+              <button class="btn dark" id="changeAdminPinBtn">Change PIN</button>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="section-head"><h2>Backup & Restore</h2></div>
+            <div class="stack">
+              <button class="btn light" id="exportBackupBtn">Export All Data</button>
+              <label class="btn light file-btn">Import Backup<input id="importBackup" type="file" accept="application/json"></label>
+              <button class="btn danger" id="lockSettingsBtn">Lock Settings</button>
+            </div>
+          </section>
         </div>
       </section>
     </main>
   </div>
 </div>
+
 <div class="drawer-backdrop" id="drawerBackdrop"></div>
-<div class="modal hidden" id="billModal"><div class="modal-card"><div class="modal-head"><h2>Saved Bill</h2><button class="btn danger small" id="closeBillModal">Close</button></div><div class="invoice" id="savedBillView"></div><div class="action-bar"><button class="btn dark" id="modalPrintBtn">Print / PDF</button><button class="btn light" id="modalShareBtn">WhatsApp Share</button><button class="btn primary" id="modalEditBtn">Edit Bill</button></div></div></div>
-<script src="v2-migrate.js"></script>
+<div class="toast-message" id="appToast"></div>
+<div class="modal hidden" id="billModal">
+  <div class="modal-card">
+    <div class="modal-head"><h2>Saved Bill</h2><button class="btn danger small" id="closeBillModal">Close</button></div>
+    <div class="invoice" id="savedBillView"></div>
+    <div class="action-bar"><button class="btn dark" id="modalPrintBtn">Print / PDF</button><button class="btn light" id="modalShareBtn">WhatsApp Share</button><button class="btn primary" id="modalEditBtn">Edit Bill</button></div>
+  </div>
+</div>
+
 <script src="app-v2.js"></script>
-<script src="v2-hotfix.js"></script>
 </body>
 </html>
