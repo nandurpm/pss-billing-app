@@ -4,6 +4,13 @@ app/build/
 local.properties
 *.apk
 *.aab
+*.apks
+*.keystore
+*.jks
 .DS_Store
 .idea/
 *.iml
+captures/
+.externalNativeBuild/
+.cxx/
+*.log
