@@ -1,1 +1,1 @@
-Build trigger after saved bill viewer, WhatsApp image share, native PDF print, GST hide, bill number format, and banner fixes.
+Build trigger after removing AndroidX FileProvider and stabilizing APK build.
