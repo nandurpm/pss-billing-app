@@ -1,1 +1,1 @@
-Build trigger after A4 matching WhatsApp bill image layout fix.
+Build trigger after WhatsApp share image matches PDF bill and logo/banner consistency fix.
