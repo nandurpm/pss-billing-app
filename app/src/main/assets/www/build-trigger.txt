@@ -1,1 +1,1 @@
-Build trigger after WhatsApp share image matches PDF bill and logo/banner consistency fix.
+Build trigger after replacing the broken salon logo with a valid wide logo in the app, PDF and WhatsApp bill image.
