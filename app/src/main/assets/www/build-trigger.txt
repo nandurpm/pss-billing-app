@@ -1,1 +1,1 @@
-Build trigger after direct native PDF export and uploaded banner update.
+Build trigger after saved bill viewer, WhatsApp image share, native PDF print, GST hide, bill number format, and banner fixes.
