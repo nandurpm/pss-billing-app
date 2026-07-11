@@ -1,1 +1,1 @@
-Final build trigger for Purple Signature Salon v2.1.0 after IndexedDB repair, deterministic invoice keys, dynamic staff reports, secure PIN storage, mobile validation, discount validation, native PDF/print, and WhatsApp image sharing fixes.
+Final build trigger for Purple Signature Salon v2.1.1: device-width viewport lock, disabled pinch zoom, disabled WebView zoom, no horizontal page overflow, and responsive full-screen fitting.
