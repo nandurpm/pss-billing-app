@@ -10,6 +10,7 @@ import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.pdf.PdfDocument;
 import android.net.Uri;
@@ -39,11 +40,14 @@ import org.json.JSONObject;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 
 public class MainActivity extends Activity {
     private WebView webView;
+    private Bitmap cachedOriginalLogo;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -202,12 +206,15 @@ public class MainActivity extends Activity {
         try {
             JSONObject root = new JSONObject(payloadJson);
             JSONObject bill = root.getJSONObject("bill");
-            Bitmap bitmap = Bitmap.createBitmap(1080, 1500, Bitmap.Config.ARGB_8888);
+            // A4 ratio image, so WhatsApp bill looks like the PDF bill.
+            Bitmap bitmap = Bitmap.createBitmap(1080, 1528, Bitmap.Config.ARGB_8888);
             Canvas canvas = new Canvas(bitmap);
-            drawBill(canvas, root, 1080, 1500, true);
+            drawBill(canvas, root, 1080, 1528, true);
+
             String imageName = cleanFileName("Purple_Signature_" + bill.optString("invoiceNo", "Bill") + ".jpg");
             Uri uri = saveImageToMediaStore(bitmap, imageName);
             if (uri == null) throw new Exception("Cannot create bill image");
+
             Intent intent = new Intent(Intent.ACTION_SEND);
             intent.setType("image/jpeg");
             intent.putExtra(Intent.EXTRA_STREAM, uri);
@@ -255,19 +262,21 @@ public class MainActivity extends Activity {
     private void drawBill(Canvas canvas, JSONObject root, int pageWidth, int pageHeight, boolean imageMode) throws Exception {
         JSONObject bill = root.getJSONObject("bill");
         JSONObject shop = root.getJSONObject("settings");
-        float scale = imageMode ? (pageWidth / 595f) : 1f;
-        float margin = imageMode ? 54f : 32f;
+        float scale = pageWidth / 595f;
+        float margin = 32f * scale;
         Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         paint.setColor(Color.WHITE);
         canvas.drawRect(0, 0, pageWidth, pageHeight, paint);
 
-        Bitmap banner = decodeDataUri(shop.optString("bannerData", ""));
-        if (banner == null) banner = decodeDataUri(shop.optString("logo", ""));
-        float bannerTop = imageMode ? 34f : 24f;
-        float bannerHeight = imageMode ? 360f : 205f;
+        Bitmap logo = getOriginalLogo(shop);
+        float bannerTop = 20f * scale;
+        float bannerHeight = 250f * scale;
         RectF bannerRect = new RectF(margin, bannerTop, pageWidth - margin, bannerTop + bannerHeight);
-        if (banner != null) drawBitmapCrop(canvas, banner, bannerRect, paint);
-        else {
+        if (logo != null) {
+            paint.setColor(Color.WHITE);
+            canvas.drawRect(bannerRect, paint);
+            drawBitmapContain(canvas, logo, bannerRect, paint);
+        } else {
             paint.setColor(Color.rgb(42, 6, 60));
             canvas.drawRect(bannerRect, paint);
             paint.setColor(Color.WHITE);
@@ -277,7 +286,7 @@ public class MainActivity extends Activity {
             paint.setFakeBoldText(false);
         }
 
-        float y = bannerRect.bottom + 30f * scale;
+        float y = bannerRect.bottom + 28f * scale;
         paint.setColor(Color.rgb(36, 17, 47));
         paint.setTextSize(13f * scale);
         paint.setFakeBoldText(true);
@@ -288,11 +297,12 @@ public class MainActivity extends Activity {
         canvas.drawText("Date", pageWidth - margin - 180f * scale, y, paint);
         paint.setFakeBoldText(false);
         canvas.drawText(bill.optString("billDate", ""), pageWidth - margin - 130f * scale, y, paint);
+
         y += 28f * scale;
         paint.setFakeBoldText(true);
         canvas.drawText("Customer", margin, y, paint);
         paint.setFakeBoldText(false);
-        canvas.drawText(limit(bill.optString("customer", "Walk-in Customer"), imageMode ? 32 : 36), margin + 82f * scale, y, paint);
+        canvas.drawText(limit(bill.optString("customer", "Walk-in Customer"), 36), margin + 82f * scale, y, paint);
         paint.setFakeBoldText(true);
         canvas.drawText("Mobile", pageWidth - margin - 180f * scale, y, paint);
         paint.setFakeBoldText(false);
@@ -302,10 +312,11 @@ public class MainActivity extends Activity {
         float tableLeft = margin;
         float tableRight = pageWidth - margin;
         float itemX = tableLeft + 8f * scale;
-        float qtyX = tableLeft + (imageMode ? 555f : 268f) * scale;
-        float rateX = tableLeft + (imageMode ? 700f : 333f) * scale;
-        float totalX = tableLeft + (imageMode ? 870f : 433f) * scale;
+        float qtyX = tableLeft + 268f * scale;
+        float rateX = tableLeft + 333f * scale;
+        float totalX = tableLeft + 433f * scale;
         float rowH = 28f * scale;
+
         paint.setColor(Color.rgb(42, 6, 60));
         canvas.drawRect(tableLeft, y - 20f * scale, tableRight, y + 8f * scale, paint);
         paint.setColor(Color.WHITE);
@@ -319,7 +330,7 @@ public class MainActivity extends Activity {
         y += 32f * scale;
 
         JSONArray itemArray = bill.optJSONArray("items");
-        int maxRows = imageMode ? 16 : 10;
+        int maxRows = imageMode ? 10 : 10;
         if (itemArray != null && itemArray.length() > 0) {
             for (int i = 0; i < itemArray.length() && i < maxRows; i++) {
                 JSONObject item = itemArray.getJSONObject(i);
@@ -330,7 +341,7 @@ public class MainActivity extends Activity {
                 double qty = item.optDouble("qty", 1);
                 double rate = item.optDouble("rate", 0);
                 double total = qty * rate;
-                canvas.drawText(limit(item.optString("name", "Item"), imageMode ? 35 : 32), itemX, y, paint);
+                canvas.drawText(limit(item.optString("name", "Item"), 32), itemX, y, paint);
                 canvas.drawText(formatQty(qty), qtyX, y, paint);
                 canvas.drawText(formatMoney(rate), rateX, y, paint);
                 canvas.drawText(formatMoney(total), totalX, y, paint);
@@ -343,13 +354,13 @@ public class MainActivity extends Activity {
         }
 
         y += 24f * scale;
-        float summaryW = imageMode ? 430f : 235f;
+        float summaryW = 235f * scale;
         float summaryX = pageWidth - margin - summaryW;
         drawSummaryRow(canvas, paint, summaryX, y, summaryW, "Subtotal", formatMoney(bill.optDouble("subtotal", 0)), false, scale); y += 30f * scale;
         drawSummaryRow(canvas, paint, summaryX, y, summaryW, "Discount", formatMoney(bill.optDouble("discount", 0)), false, scale); y += 30f * scale;
         drawSummaryRow(canvas, paint, summaryX, y, summaryW, "Grand Total", formatMoney(bill.optDouble("grand", 0)), true, scale);
 
-        float bottomY = imageMode ? pageHeight - 210f : pageHeight - 130f;
+        float bottomY = pageHeight - 130f * scale;
         paint.setColor(Color.rgb(36, 17, 47));
         paint.setTextSize(12f * scale);
         paint.setFakeBoldText(true);
@@ -365,16 +376,17 @@ public class MainActivity extends Activity {
         paint.setFakeBoldText(true);
         canvas.drawText("Notes:", margin, bottomY, paint);
         paint.setFakeBoldText(false);
-        canvas.drawText(limit(bill.optString("notes", "-"), imageMode ? 58 : 64), margin + 70f * scale, bottomY, paint);
+        canvas.drawText(limit(bill.optString("notes", "-"), 64), margin + 70f * scale, bottomY, paint);
 
         Bitmap qrBitmap = decodeDataUri(shop.optString("qr", ""));
         if (qrBitmap != null) {
-            float qrSize = imageMode ? 150f : 75f;
+            float qrSize = 75f * scale;
             RectF qrRect = new RectF(margin, pageHeight - margin - qrSize, margin + qrSize, pageHeight - margin);
             canvas.drawBitmap(qrBitmap, null, qrRect, paint);
             paint.setTextSize(10f * scale);
-            canvas.drawText("Scan to pay", margin, pageHeight - margin + (imageMode ? 24f : 12f), paint);
+            canvas.drawText("Scan to pay", margin, pageHeight - margin + 12f * scale, paint);
         }
+
         paint.setTextSize(12f * scale);
         paint.setColor(Color.rgb(115, 92, 122));
         paint.setTextAlign(Paint.Align.CENTER);
@@ -393,17 +405,49 @@ public class MainActivity extends Activity {
         paint.setFakeBoldText(false);
     }
 
-    private void drawBitmapCrop(Canvas canvas, Bitmap bitmap, RectF dst, Paint paint) {
+    private Bitmap getOriginalLogo(JSONObject shop) {
+        Bitmap inline = decodeDataUri(shop.optString("bannerData", ""));
+        if (inline != null) return inline;
+        inline = decodeDataUri(shop.optString("logo", ""));
+        if (inline != null) return inline;
+        return loadOriginalLogoFromAsset();
+    }
+
+    private Bitmap loadOriginalLogoFromAsset() {
+        if (cachedOriginalLogo != null) return cachedOriginalLogo;
+        try {
+            InputStream input = getAssets().open("www/banner-data.js");
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            byte[] buffer = new byte[4096];
+            int read;
+            while ((read = input.read(buffer)) != -1) out.write(buffer, 0, read);
+            input.close();
+            String js = new String(out.toByteArray(), StandardCharsets.UTF_8);
+            int start = js.indexOf("data:image");
+            if (start < 0) return null;
+            int end = js.indexOf("'", start);
+            if (end < 0) end = js.indexOf("\"", start);
+            if (end < 0) return null;
+            String dataUri = js.substring(start, end);
+            cachedOriginalLogo = decodeDataUri(dataUri);
+            return cachedOriginalLogo;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private void drawBitmapContain(Canvas canvas, Bitmap bitmap, RectF dst, Paint paint) {
         float srcRatio = bitmap.getWidth() / (float) bitmap.getHeight();
         float dstRatio = dst.width() / dst.height();
-        int srcW = bitmap.getWidth();
-        int srcH = bitmap.getHeight();
-        int left = 0;
-        int top = 0;
-        if (srcRatio > dstRatio) { srcW = Math.round(srcH * dstRatio); left = (bitmap.getWidth() - srcW) / 2; }
-        else { srcH = Math.round(srcW / dstRatio); top = (bitmap.getHeight() - srcH) / 2; }
-        android.graphics.Rect src = new android.graphics.Rect(left, top, left + srcW, top + srcH);
-        canvas.drawBitmap(bitmap, src, dst, paint);
+        float drawW = dst.width();
+        float drawH = dst.height();
+        if (srcRatio > dstRatio) drawH = drawW / srcRatio;
+        else drawW = drawH * srcRatio;
+        float left = dst.left + (dst.width() - drawW) / 2f;
+        float top = dst.top + (dst.height() - drawH) / 2f;
+        Rect src = new Rect(0, 0, bitmap.getWidth(), bitmap.getHeight());
+        RectF target = new RectF(left, top, left + drawW, top + drawH);
+        canvas.drawBitmap(bitmap, src, target, paint);
     }
 
     private Bitmap decodeDataUri(String dataUri) {
@@ -423,17 +467,10 @@ public class MainActivity extends Activity {
         if (digits.length() < 11) return "";
         return digits + "@s.whatsapp.net";
     }
+
     private String formatMoney(double value) { return "Rs. " + String.format(Locale.US, "%.2f", value); }
-    private String formatQty(double value) {
-        if (Math.abs(value - Math.round(value)) < 0.001) return String.valueOf((int) Math.round(value));
-        return String.format(Locale.US, "%.2f", value);
-    }
-    private String limit(String text, int max) {
-        if (text == null) return "";
-        String clean = text.replace('\n', ' ').replace('\r', ' ').trim();
-        if (clean.length() <= max) return clean;
-        return clean.substring(0, Math.max(0, max - 3)) + "...";
-    }
+    private String formatQty(double value) { if (Math.abs(value - Math.round(value)) < 0.001) return String.valueOf((int) Math.round(value)); return String.format(Locale.US, "%.2f", value); }
+    private String limit(String text, int max) { if (text == null) return ""; String clean = text.replace('\n', ' ').replace('\r', ' ').trim(); if (clean.length() <= max) return clean; return clean.substring(0, Math.max(0, max - 3)) + "..."; }
     private String cleanFileName(String text) { return text.replaceAll("[^A-Za-z0-9._-]", "_"); }
 
     @Override
