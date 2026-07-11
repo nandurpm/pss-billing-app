@@ -1,1 +1,1 @@
-Build trigger after removing AndroidX FileProvider and stabilizing APK build.
+Build trigger after WhatsApp bill image layout matches PDF and logo banner rendering fix.
