@@ -1,1 +1,1 @@
-Build trigger after replacing the broken salon logo with a valid wide logo in the app, PDF and WhatsApp bill image.
+Build trigger after verified logo repair for app preview, PDF and WhatsApp shared bill image.
