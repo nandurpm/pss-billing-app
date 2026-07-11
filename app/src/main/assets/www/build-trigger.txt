@@ -1,1 +1,1 @@
-Build trigger after verified logo repair for app preview, PDF and WhatsApp shared bill image.
+Build trigger for Purple Signature Salon v2.0 sidebar billing reports settings APK.
