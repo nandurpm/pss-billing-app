@@ -34,8 +34,6 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Toast;
 
-import androidx.core.content.FileProvider;
-
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -48,7 +46,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 
 public class MainActivity extends Activity {
-    private static final String FILE_PROVIDER_AUTHORITY = "com.purplesignature.billing.fileprovider";
     private WebView webView;
     private Bitmap cachedBannerBitmap;
 
@@ -123,11 +120,9 @@ public class MainActivity extends Activity {
         PdfDocument document = new PdfDocument();
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         try {
-            int pageWidth = 595;
-            int pageHeight = 842;
-            PdfDocument.PageInfo pageInfo = new PdfDocument.PageInfo.Builder(pageWidth, pageHeight, 1).create();
+            PdfDocument.PageInfo pageInfo = new PdfDocument.PageInfo.Builder(595, 842, 1).create();
             PdfDocument.Page page = document.startPage(pageInfo);
-            drawBill(page.getCanvas(), root, pageWidth, pageHeight, false);
+            drawBill(page.getCanvas(), root, 595, 842, false);
             document.finishPage(page);
             document.writeTo(out);
             return out.toByteArray();
@@ -243,15 +238,10 @@ public class MainActivity extends Activity {
             Canvas canvas = new Canvas(bitmap);
             drawBill(canvas, root, 1080, 1500, true);
 
-            File shareDir = new File(getCacheDir(), "shared_bills");
-            if (!shareDir.exists() && !shareDir.mkdirs()) throw new Exception("Cannot create share cache");
-            File imageFile = new File(shareDir, cleanFileName("Bill_" + bill.optString("invoiceNo", "Bill") + ".jpg"));
-            FileOutputStream out = new FileOutputStream(imageFile);
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out);
-            out.flush();
-            out.close();
+            String imageName = cleanFileName("Purple_Signature_" + bill.optString("invoiceNo", "Bill") + ".jpg");
+            Uri uri = saveImageToMediaStore(bitmap, imageName);
+            if (uri == null) throw new Exception("Cannot create bill image");
 
-            Uri uri = FileProvider.getUriForFile(this, FILE_PROVIDER_AUTHORITY, imageFile);
             Intent intent = new Intent(Intent.ACTION_SEND);
             intent.setType("image/jpeg");
             intent.putExtra(Intent.EXTRA_STREAM, uri);
@@ -274,6 +264,31 @@ public class MainActivity extends Activity {
             }
         } catch (Exception e) {
             Toast.makeText(this, "Share failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private Uri saveImageToMediaStore(Bitmap bitmap, String fileName) throws Exception {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            ContentValues values = new ContentValues();
+            values.put(MediaStore.MediaColumns.DISPLAY_NAME, fileName);
+            values.put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg");
+            values.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/Purple Signature");
+            values.put(MediaStore.MediaColumns.IS_PENDING, 1);
+            Uri uri = getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
+            if (uri == null) throw new Exception("Cannot create image");
+            OutputStream out = getContentResolver().openOutputStream(uri);
+            if (out == null) throw new Exception("Cannot write image");
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out);
+            out.flush();
+            out.close();
+            values.clear();
+            values.put(MediaStore.MediaColumns.IS_PENDING, 0);
+            getContentResolver().update(uri, values, null, null);
+            return uri;
+        } else {
+            String saved = MediaStore.Images.Media.insertImage(getContentResolver(), bitmap, fileName, "Purple Signature bill");
+            if (saved == null) return null;
+            return Uri.parse(saved);
         }
     }
 
@@ -380,11 +395,6 @@ public class MainActivity extends Activity {
         float summaryX = pageWidth - margin - summaryW;
         drawSummaryRow(canvas, paint, summaryX, y, summaryW, "Subtotal", formatMoney(bill.optDouble("subtotal", 0)), false, scale); y += 30f * scale;
         drawSummaryRow(canvas, paint, summaryX, y, summaryW, "Discount", formatMoney(bill.optDouble("discount", 0)), false, scale); y += 30f * scale;
-        double tax = bill.optDouble("tax", 0);
-        if (tax > 0.001) {
-            drawSummaryRow(canvas, paint, summaryX, y, summaryW, "Tax " + tax + "%", formatMoney(bill.optDouble("taxAmount", 0)), false, scale);
-            y += 30f * scale;
-        }
         drawSummaryRow(canvas, paint, summaryX, y, summaryW, "Grand Total", formatMoney(bill.optDouble("grand", 0)), true, scale);
 
         float bottomY = imageMode ? pageHeight - 210f : pageHeight - 130f;
