@@ -47,13 +47,12 @@ import java.util.Locale;
 
 public class MainActivity extends Activity {
     private WebView webView;
-    private Bitmap cachedOriginalLogo;
+    private Bitmap cachedBannerBitmap;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
-
         Window window = getWindow();
         window.setStatusBarColor(Color.parseColor("#2A063C"));
         window.setNavigationBarColor(Color.parseColor("#170021"));
@@ -110,9 +109,8 @@ public class MainActivity extends Activity {
         PdfDocument document = new PdfDocument();
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         try {
-            PdfDocument.PageInfo pageInfo = new PdfDocument.PageInfo.Builder(595, 842, 1).create();
-            PdfDocument.Page page = document.startPage(pageInfo);
-            drawBill(page.getCanvas(), root, 595, 842, false);
+            PdfDocument.Page page = document.startPage(new PdfDocument.PageInfo.Builder(595, 842, 1).create());
+            drawBill(page.getCanvas(), root, 595, 842);
             document.finishPage(page);
             document.writeTo(out);
             return out.toByteArray();
@@ -137,20 +135,14 @@ public class MainActivity extends Activity {
                 if (outputStream == null) throw new Exception("Cannot open PDF file");
                 outputStream.write(pdfBytes);
                 outputStream.flush();
-                outputStream.close();
-                outputStream = null;
-                values.clear();
-                values.put(MediaStore.MediaColumns.IS_PENDING, 0);
+                outputStream.close(); outputStream = null;
+                values.clear(); values.put(MediaStore.MediaColumns.IS_PENDING, 0);
                 getContentResolver().update(uri, values, null, null);
             } else {
                 File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "Purple Signature");
                 if (!dir.exists() && !dir.mkdirs()) throw new Exception("Cannot create Downloads folder");
-                File file = new File(dir, fileName);
-                outputStream = new FileOutputStream(file);
-                outputStream.write(pdfBytes);
-                outputStream.flush();
-                outputStream.close();
-                outputStream = null;
+                outputStream = new FileOutputStream(new File(dir, fileName));
+                outputStream.write(pdfBytes); outputStream.flush(); outputStream.close(); outputStream = null;
             }
         } finally {
             if (outputStream != null) outputStream.close();
@@ -173,32 +165,22 @@ public class MainActivity extends Activity {
     }
 
     private class PdfBytesPrintAdapter extends PrintDocumentAdapter {
-        private final byte[] pdfBytes;
-        private final String fileName;
+        private final byte[] pdfBytes; private final String fileName;
         PdfBytesPrintAdapter(byte[] pdfBytes, String fileName) { this.pdfBytes = pdfBytes; this.fileName = fileName; }
-        @Override
-        public void onLayout(PrintAttributes oldAttributes, PrintAttributes newAttributes, CancellationSignal cancellationSignal, LayoutResultCallback callback, Bundle extras) {
+        @Override public void onLayout(PrintAttributes oldAttributes, PrintAttributes newAttributes, CancellationSignal cancellationSignal, LayoutResultCallback callback, Bundle extras) {
             if (cancellationSignal.isCanceled()) { callback.onLayoutCancelled(); return; }
-            PrintDocumentInfo info = new PrintDocumentInfo.Builder(fileName)
-                    .setContentType(PrintDocumentInfo.CONTENT_TYPE_DOCUMENT)
-                    .setPageCount(1)
-                    .build();
+            PrintDocumentInfo info = new PrintDocumentInfo.Builder(fileName).setContentType(PrintDocumentInfo.CONTENT_TYPE_DOCUMENT).setPageCount(1).build();
             callback.onLayoutFinished(info, true);
         }
-        @Override
-        public void onWrite(PageRange[] pages, ParcelFileDescriptor destination, CancellationSignal cancellationSignal, WriteResultCallback callback) {
+        @Override public void onWrite(PageRange[] pages, ParcelFileDescriptor destination, CancellationSignal cancellationSignal, WriteResultCallback callback) {
             FileOutputStream out = null;
             try {
                 if (cancellationSignal.isCanceled()) { callback.onWriteCancelled(); return; }
                 out = new FileOutputStream(destination.getFileDescriptor());
-                out.write(pdfBytes);
-                out.flush();
+                out.write(pdfBytes); out.flush();
                 callback.onWriteFinished(new PageRange[]{PageRange.ALL_PAGES});
-            } catch (Exception e) {
-                callback.onWriteFailed(e.getMessage());
-            } finally {
-                try { if (out != null) out.close(); } catch (Exception ignored) {}
-            }
+            } catch (Exception e) { callback.onWriteFailed(e.getMessage()); }
+            finally { try { if (out != null) out.close(); } catch (Exception ignored) {} }
         }
     }
 
@@ -206,11 +188,8 @@ public class MainActivity extends Activity {
         try {
             JSONObject root = new JSONObject(payloadJson);
             JSONObject bill = root.getJSONObject("bill");
-            // A4 ratio image, so WhatsApp bill looks like the PDF bill.
             Bitmap bitmap = Bitmap.createBitmap(1080, 1528, Bitmap.Config.ARGB_8888);
-            Canvas canvas = new Canvas(bitmap);
-            drawBill(canvas, root, 1080, 1528, true);
-
+            drawBill(new Canvas(bitmap), root, 1080, 1528);
             String imageName = cleanFileName("Purple_Signature_" + bill.optString("invoiceNo", "Bill") + ".jpg");
             Uri uri = saveImageToMediaStore(bitmap, imageName);
             if (uri == null) throw new Exception("Cannot create bill image");
@@ -222,16 +201,13 @@ public class MainActivity extends Activity {
             String jid = whatsappJid(bill.optString("mobile", ""));
             if (!jid.isEmpty()) intent.putExtra("jid", jid);
             intent.setPackage("com.whatsapp");
-            try {
-                startActivity(intent);
-            } catch (ActivityNotFoundException first) {
+            try { startActivity(intent); }
+            catch (ActivityNotFoundException first) {
                 intent.setPackage("com.whatsapp.w4b");
                 try { startActivity(intent); }
                 catch (ActivityNotFoundException second) { intent.setPackage(null); startActivity(Intent.createChooser(intent, "Share bill image")); }
             }
-        } catch (Exception e) {
-            Toast.makeText(this, "Share failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
-        }
+        } catch (Exception e) { Toast.makeText(this, "Share failed: " + e.getMessage(), Toast.LENGTH_LONG).show(); }
     }
 
     private Uri saveImageToMediaStore(Bitmap bitmap, String fileName) throws Exception {
@@ -245,237 +221,152 @@ public class MainActivity extends Activity {
             if (uri == null) throw new Exception("Cannot create image");
             OutputStream out = getContentResolver().openOutputStream(uri);
             if (out == null) throw new Exception("Cannot write image");
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out);
-            out.flush();
-            out.close();
-            values.clear();
-            values.put(MediaStore.MediaColumns.IS_PENDING, 0);
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 96, out);
+            out.flush(); out.close();
+            values.clear(); values.put(MediaStore.MediaColumns.IS_PENDING, 0);
             getContentResolver().update(uri, values, null, null);
             return uri;
         } else {
             String saved = MediaStore.Images.Media.insertImage(getContentResolver(), bitmap, fileName, "Purple Signature bill");
-            if (saved == null) return null;
-            return Uri.parse(saved);
+            return saved == null ? null : Uri.parse(saved);
         }
     }
 
-    private void drawBill(Canvas canvas, JSONObject root, int pageWidth, int pageHeight, boolean imageMode) throws Exception {
+    private void drawBill(Canvas canvas, JSONObject root, int pageWidth, int pageHeight) throws Exception {
         JSONObject bill = root.getJSONObject("bill");
         JSONObject shop = root.getJSONObject("settings");
         float scale = pageWidth / 595f;
         float margin = 32f * scale;
         Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        paint.setColor(Color.WHITE);
-        canvas.drawRect(0, 0, pageWidth, pageHeight, paint);
 
-        Bitmap logo = getOriginalLogo(shop);
+        paint.setColor(Color.WHITE); canvas.drawRect(0, 0, pageWidth, pageHeight, paint);
+
+        Bitmap banner = loadBannerBitmap();
         float bannerTop = 20f * scale;
-        float bannerHeight = 250f * scale;
+        float bannerHeight = 120f * scale;
         RectF bannerRect = new RectF(margin, bannerTop, pageWidth - margin, bannerTop + bannerHeight);
-        if (logo != null) {
-            paint.setColor(Color.WHITE);
-            canvas.drawRect(bannerRect, paint);
-            drawBitmapContain(canvas, logo, bannerRect, paint);
-        } else {
-            paint.setColor(Color.rgb(42, 6, 60));
-            canvas.drawRect(bannerRect, paint);
-            paint.setColor(Color.WHITE);
-            paint.setTextSize(24f * scale);
-            paint.setFakeBoldText(true);
-            canvas.drawText("Purple Signature Salon", margin + 10f * scale, bannerTop + 72f * scale, paint);
-            paint.setFakeBoldText(false);
+        if (banner != null) drawBitmapFit(canvas, banner, bannerRect, paint);
+        else {
+            paint.setColor(Color.rgb(42, 6, 60)); canvas.drawRect(bannerRect, paint);
+            paint.setColor(Color.WHITE); paint.setTextSize(24f * scale); paint.setFakeBoldText(true);
+            canvas.drawText("Purple Signature Salon", margin + 10f * scale, bannerTop + 56f * scale, paint); paint.setFakeBoldText(false);
         }
 
-        float y = bannerRect.bottom + 28f * scale;
-        paint.setColor(Color.rgb(36, 17, 47));
-        paint.setTextSize(13f * scale);
-        paint.setFakeBoldText(true);
-        canvas.drawText("Invoice", margin, y, paint);
-        paint.setFakeBoldText(false);
+        float y = bannerRect.bottom + 30f * scale;
+        paint.setColor(Color.rgb(36,17,47)); paint.setTextSize(13f * scale);
+        paint.setFakeBoldText(true); canvas.drawText("Invoice", margin, y, paint); paint.setFakeBoldText(false);
         canvas.drawText(bill.optString("invoiceNo", ""), margin + 70f * scale, y, paint);
-        paint.setFakeBoldText(true);
-        canvas.drawText("Date", pageWidth - margin - 180f * scale, y, paint);
-        paint.setFakeBoldText(false);
+        paint.setFakeBoldText(true); canvas.drawText("Date", pageWidth - margin - 180f * scale, y, paint); paint.setFakeBoldText(false);
         canvas.drawText(bill.optString("billDate", ""), pageWidth - margin - 130f * scale, y, paint);
 
         y += 28f * scale;
-        paint.setFakeBoldText(true);
-        canvas.drawText("Customer", margin, y, paint);
-        paint.setFakeBoldText(false);
+        paint.setFakeBoldText(true); canvas.drawText("Customer", margin, y, paint); paint.setFakeBoldText(false);
         canvas.drawText(limit(bill.optString("customer", "Walk-in Customer"), 36), margin + 82f * scale, y, paint);
-        paint.setFakeBoldText(true);
-        canvas.drawText("Mobile", pageWidth - margin - 180f * scale, y, paint);
-        paint.setFakeBoldText(false);
+        paint.setFakeBoldText(true); canvas.drawText("Mobile", pageWidth - margin - 180f * scale, y, paint); paint.setFakeBoldText(false);
         canvas.drawText(limit(bill.optString("mobile", ""), 18), pageWidth - margin - 130f * scale, y, paint);
 
         y += 40f * scale;
-        float tableLeft = margin;
-        float tableRight = pageWidth - margin;
-        float itemX = tableLeft + 8f * scale;
-        float qtyX = tableLeft + 268f * scale;
-        float rateX = tableLeft + 333f * scale;
-        float totalX = tableLeft + 433f * scale;
+        float tableLeft = margin, tableRight = pageWidth - margin;
+        float itemX = tableLeft + 8f * scale, qtyX = tableLeft + 268f * scale, rateX = tableLeft + 333f * scale, totalX = tableLeft + 433f * scale;
         float rowH = 28f * scale;
-
-        paint.setColor(Color.rgb(42, 6, 60));
-        canvas.drawRect(tableLeft, y - 20f * scale, tableRight, y + 8f * scale, paint);
-        paint.setColor(Color.WHITE);
-        paint.setFakeBoldText(true);
-        paint.setTextSize(12f * scale);
-        canvas.drawText("Item", itemX, y, paint);
-        canvas.drawText("Qty", qtyX, y, paint);
-        canvas.drawText("Rate", rateX, y, paint);
-        canvas.drawText("Total", totalX, y, paint);
-        paint.setFakeBoldText(false);
-        y += 32f * scale;
+        paint.setColor(Color.rgb(42, 6, 60)); canvas.drawRect(tableLeft, y - 20f * scale, tableRight, y + 8f * scale, paint);
+        paint.setColor(Color.WHITE); paint.setFakeBoldText(true); paint.setTextSize(12f * scale);
+        canvas.drawText("Item", itemX, y, paint); canvas.drawText("Qty", qtyX, y, paint); canvas.drawText("Rate", rateX, y, paint); canvas.drawText("Total", totalX, y, paint);
+        paint.setFakeBoldText(false); y += 32f * scale;
 
         JSONArray itemArray = bill.optJSONArray("items");
-        int maxRows = imageMode ? 10 : 10;
+        int maxRows = 12;
         if (itemArray != null && itemArray.length() > 0) {
             for (int i = 0; i < itemArray.length() && i < maxRows; i++) {
                 JSONObject item = itemArray.getJSONObject(i);
-                paint.setColor(i % 2 == 0 ? Color.rgb(251, 246, 255) : Color.WHITE);
+                paint.setColor(i % 2 == 0 ? Color.rgb(251,246,255) : Color.WHITE);
                 canvas.drawRect(tableLeft, y - 18f * scale, tableRight, y + 8f * scale, paint);
-                paint.setColor(Color.rgb(36, 17, 47));
-                paint.setTextSize(12f * scale);
-                double qty = item.optDouble("qty", 1);
-                double rate = item.optDouble("rate", 0);
-                double total = qty * rate;
+                paint.setColor(Color.rgb(36,17,47)); paint.setTextSize(12f * scale);
+                double qty = item.optDouble("qty", 1), rate = item.optDouble("rate", 0);
                 canvas.drawText(limit(item.optString("name", "Item"), 32), itemX, y, paint);
                 canvas.drawText(formatQty(qty), qtyX, y, paint);
                 canvas.drawText(formatMoney(rate), rateX, y, paint);
-                canvas.drawText(formatMoney(total), totalX, y, paint);
+                canvas.drawText(formatMoney(qty * rate), totalX, y, paint);
                 y += rowH;
             }
-        } else {
-            paint.setColor(Color.rgb(36, 17, 47));
-            canvas.drawText("No items added", itemX, y, paint);
-            y += rowH;
-        }
+            if (itemArray.length() > maxRows) { paint.setTextSize(11f * scale); canvas.drawText("More items available in saved bill view...", itemX, y, paint); y += rowH; }
+        } else { paint.setColor(Color.rgb(36,17,47)); canvas.drawText("No items added", itemX, y, paint); y += rowH; }
 
         y += 24f * scale;
-        float summaryW = 235f * scale;
-        float summaryX = pageWidth - margin - summaryW;
+        float summaryW = 235f * scale, summaryX = pageWidth - margin - summaryW;
         drawSummaryRow(canvas, paint, summaryX, y, summaryW, "Subtotal", formatMoney(bill.optDouble("subtotal", 0)), false, scale); y += 30f * scale;
         drawSummaryRow(canvas, paint, summaryX, y, summaryW, "Discount", formatMoney(bill.optDouble("discount", 0)), false, scale); y += 30f * scale;
+        double tax = bill.optDouble("tax", 0);
+        if (tax > 0.001) { drawSummaryRow(canvas, paint, summaryX, y, summaryW, "Tax " + tax + "%", formatMoney(bill.optDouble("taxAmount", 0)), false, scale); y += 30f * scale; }
         drawSummaryRow(canvas, paint, summaryX, y, summaryW, "Grand Total", formatMoney(bill.optDouble("grand", 0)), true, scale);
 
         float bottomY = pageHeight - 130f * scale;
-        paint.setColor(Color.rgb(36, 17, 47));
-        paint.setTextSize(12f * scale);
-        paint.setFakeBoldText(true);
-        canvas.drawText("Payment:", margin, bottomY, paint);
-        paint.setFakeBoldText(false);
-        canvas.drawText(bill.optString("payment", "Cash"), margin + 70f * scale, bottomY, paint);
-        bottomY += 26f * scale;
-        paint.setFakeBoldText(true);
-        canvas.drawText("Staff:", margin, bottomY, paint);
-        paint.setFakeBoldText(false);
-        canvas.drawText(limit(bill.optString("staff", "-"), 35), margin + 70f * scale, bottomY, paint);
-        bottomY += 26f * scale;
-        paint.setFakeBoldText(true);
-        canvas.drawText("Notes:", margin, bottomY, paint);
-        paint.setFakeBoldText(false);
-        canvas.drawText(limit(bill.optString("notes", "-"), 64), margin + 70f * scale, bottomY, paint);
+        paint.setColor(Color.rgb(36,17,47)); paint.setTextSize(12f * scale);
+        paint.setFakeBoldText(true); canvas.drawText("Payment:", margin, bottomY, paint); paint.setFakeBoldText(false); canvas.drawText(bill.optString("payment", "Cash"), margin + 70f * scale, bottomY, paint);
+        bottomY += 26f * scale; paint.setFakeBoldText(true); canvas.drawText("Staff:", margin, bottomY, paint); paint.setFakeBoldText(false); canvas.drawText(limit(bill.optString("staff", "-"), 35), margin + 70f * scale, bottomY, paint);
+        bottomY += 26f * scale; paint.setFakeBoldText(true); canvas.drawText("Notes:", margin, bottomY, paint); paint.setFakeBoldText(false); canvas.drawText(limit(bill.optString("notes", "-"), 64), margin + 70f * scale, bottomY, paint);
 
         Bitmap qrBitmap = decodeDataUri(shop.optString("qr", ""));
         if (qrBitmap != null) {
             float qrSize = 75f * scale;
             RectF qrRect = new RectF(margin, pageHeight - margin - qrSize, margin + qrSize, pageHeight - margin);
             canvas.drawBitmap(qrBitmap, null, qrRect, paint);
-            paint.setTextSize(10f * scale);
-            canvas.drawText("Scan to pay", margin, pageHeight - margin + 12f * scale, paint);
+            paint.setTextSize(10f * scale); canvas.drawText("Scan to pay", margin, pageHeight - margin + 12f * scale, paint);
         }
-
-        paint.setTextSize(12f * scale);
-        paint.setColor(Color.rgb(115, 92, 122));
-        paint.setTextAlign(Paint.Align.CENTER);
-        canvas.drawText("Thank you. Visit again.", pageWidth / 2f, pageHeight - margin, paint);
-        paint.setTextAlign(Paint.Align.LEFT);
+        paint.setTextSize(12f * scale); paint.setColor(Color.rgb(115,92,122)); paint.setTextAlign(Paint.Align.CENTER);
+        canvas.drawText("Thank you. Visit again.", pageWidth / 2f, pageHeight - margin, paint); paint.setTextAlign(Paint.Align.LEFT);
     }
 
     private void drawSummaryRow(Canvas canvas, Paint paint, float x, float y, float width, String label, String value, boolean grand, float scale) {
-        paint.setColor(grand ? Color.rgb(123, 36, 143) : Color.rgb(251, 246, 255));
+        paint.setColor(grand ? Color.rgb(123,36,143) : Color.rgb(251,246,255));
         canvas.drawRect(x, y - 18f * scale, x + width, y + 8f * scale, paint);
-        paint.setColor(grand ? Color.WHITE : Color.rgb(36, 17, 47));
-        paint.setTextSize((grand ? 13f : 12f) * scale);
-        paint.setFakeBoldText(grand);
-        canvas.drawText(label, x + 8f * scale, y, paint);
-        canvas.drawText(value, x + width - 122f * scale, y, paint);
-        paint.setFakeBoldText(false);
+        paint.setColor(grand ? Color.WHITE : Color.rgb(36,17,47)); paint.setTextSize((grand ? 13f : 12f) * scale); paint.setFakeBoldText(grand);
+        canvas.drawText(label, x + 8f * scale, y, paint); canvas.drawText(value, x + width - 122f * scale, y, paint); paint.setFakeBoldText(false);
     }
 
-    private Bitmap getOriginalLogo(JSONObject shop) {
-        Bitmap inline = decodeDataUri(shop.optString("bannerData", ""));
-        if (inline != null) return inline;
-        inline = decodeDataUri(shop.optString("logo", ""));
-        if (inline != null) return inline;
-        return loadOriginalLogoFromAsset();
-    }
-
-    private Bitmap loadOriginalLogoFromAsset() {
-        if (cachedOriginalLogo != null) return cachedOriginalLogo;
+    private Bitmap loadBannerBitmap() {
+        if (cachedBannerBitmap != null) return cachedBannerBitmap;
         try {
-            InputStream input = getAssets().open("www/banner-data.js");
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            byte[] buffer = new byte[4096];
-            int read;
-            while ((read = input.read(buffer)) != -1) out.write(buffer, 0, read);
-            input.close();
-            String js = new String(out.toByteArray(), StandardCharsets.UTF_8);
-            int start = js.indexOf("data:image");
-            if (start < 0) return null;
-            int end = js.indexOf("'", start);
-            if (end < 0) end = js.indexOf("\"", start);
-            if (end < 0) return null;
-            String dataUri = js.substring(start, end);
-            cachedOriginalLogo = decodeDataUri(dataUri);
-            return cachedOriginalLogo;
-        } catch (Exception e) {
-            return null;
-        }
+            InputStream input = getAssets().open("www/banner.svg");
+            ByteArrayOutputStream out = new ByteArrayOutputStream(); byte[] buffer = new byte[4096]; int read;
+            while ((read = input.read(buffer)) != -1) out.write(buffer, 0, read); input.close();
+            String svg = new String(out.toByteArray(), StandardCharsets.UTF_8);
+            int start = svg.indexOf("base64,"); if (start < 0) return null; start += 7;
+            int end = svg.indexOf('"', start); if (end < 0) return null;
+            byte[] bytes = Base64.decode(svg.substring(start, end), Base64.DEFAULT);
+            cachedBannerBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+            return cachedBannerBitmap;
+        } catch (Exception e) { return null; }
     }
 
-    private void drawBitmapContain(Canvas canvas, Bitmap bitmap, RectF dst, Paint paint) {
+    private void drawBitmapFit(Canvas canvas, Bitmap bitmap, RectF dst, Paint paint) {
         float srcRatio = bitmap.getWidth() / (float) bitmap.getHeight();
         float dstRatio = dst.width() / dst.height();
-        float drawW = dst.width();
-        float drawH = dst.height();
-        if (srcRatio > dstRatio) drawH = drawW / srcRatio;
-        else drawW = drawH * srcRatio;
-        float left = dst.left + (dst.width() - drawW) / 2f;
-        float top = dst.top + (dst.height() - drawH) / 2f;
-        Rect src = new Rect(0, 0, bitmap.getWidth(), bitmap.getHeight());
-        RectF target = new RectF(left, top, left + drawW, top + drawH);
-        canvas.drawBitmap(bitmap, src, target, paint);
+        Rect src;
+        if (srcRatio > dstRatio) {
+            int srcW = Math.round(bitmap.getHeight() * dstRatio); int left = (bitmap.getWidth() - srcW) / 2;
+            src = new Rect(left, 0, left + srcW, bitmap.getHeight());
+        } else {
+            int srcH = Math.round(bitmap.getWidth() / dstRatio); int top = (bitmap.getHeight() - srcH) / 2;
+            src = new Rect(0, top, bitmap.getWidth(), top + srcH);
+        }
+        canvas.drawBitmap(bitmap, src, dst, paint);
     }
 
     private Bitmap decodeDataUri(String dataUri) {
         try {
             if (dataUri == null || !dataUri.startsWith("data:image")) return null;
-            int comma = dataUri.indexOf(',');
-            if (comma < 0) return null;
+            int comma = dataUri.indexOf(','); if (comma < 0) return null;
             byte[] bytes = Base64.decode(dataUri.substring(comma + 1), Base64.DEFAULT);
             return BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
         } catch (Exception e) { return null; }
     }
 
-    private String whatsappJid(String mobile) {
-        if (mobile == null) return "";
-        String digits = mobile.replaceAll("[^0-9]", "");
-        if (digits.length() == 10) digits = "91" + digits;
-        if (digits.length() < 11) return "";
-        return digits + "@s.whatsapp.net";
-    }
-
+    private String whatsappJid(String mobile) { String digits = mobile == null ? "" : mobile.replaceAll("[^0-9]", ""); if (digits.length() == 10) digits = "91" + digits; return digits.length() < 11 ? "" : digits + "@s.whatsapp.net"; }
     private String formatMoney(double value) { return "Rs. " + String.format(Locale.US, "%.2f", value); }
-    private String formatQty(double value) { if (Math.abs(value - Math.round(value)) < 0.001) return String.valueOf((int) Math.round(value)); return String.format(Locale.US, "%.2f", value); }
-    private String limit(String text, int max) { if (text == null) return ""; String clean = text.replace('\n', ' ').replace('\r', ' ').trim(); if (clean.length() <= max) return clean; return clean.substring(0, Math.max(0, max - 3)) + "..."; }
+    private String formatQty(double value) { return Math.abs(value - Math.round(value)) < 0.001 ? String.valueOf((int) Math.round(value)) : String.format(Locale.US, "%.2f", value); }
+    private String limit(String text, int max) { if (text == null) return ""; String clean = text.replace('\n',' ').replace('\r',' ').trim(); return clean.length() <= max ? clean : clean.substring(0, Math.max(0, max - 3)) + "..."; }
     private String cleanFileName(String text) { return text.replaceAll("[^A-Za-z0-9._-]", "_"); }
 
-    @Override
-    public void onBackPressed() {
-        if (webView != null && webView.canGoBack()) webView.goBack();
-        else super.onBackPressed();
-    }
+    @Override public void onBackPressed() { if (webView != null && webView.canGoBack()) webView.goBack(); else super.onBackPressed(); }
 }
