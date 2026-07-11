@@ -1,1 +1,1 @@
-Build trigger after fixing original logo visibility in app preview, PDF and WhatsApp bill image.
+Build trigger after matching WhatsApp bill to PDF layout and original logo fix.
