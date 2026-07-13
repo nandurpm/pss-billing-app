@@ -39,22 +39,17 @@ jobs:
       - name: Verify unsigned release APK
         run: ls -lh app/build/outputs/apk/release/app-release-unsigned.apk
 
-      - name: Stage unsigned APK and text chunks
+      - name: Publish temporary unsigned release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           APK="app/build/outputs/apk/release/app-release-unsigned.apk"
-          rm -rf release-staging/chunks
-          mkdir -p release-staging/chunks
-          cp "$APK" release-staging/Purple-Signature-Salon-v2.1.2-unsigned.apk
-          base64 -w0 "$APK" > release-staging/chunks/all-base64.txt
-          split -b 8000 -d -a 3 --additional-suffix=.txt release-staging/chunks/all-base64.txt release-staging/chunks/chunk-
-          rm release-staging/chunks/all-base64.txt
-          find release-staging/chunks -name 'chunk-*.txt' -printf '%f\n' | sort > release-staging/chunks/manifest.txt
-          sha256sum "$APK" > release-staging/chunks/unsigned-sha256.txt
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -f release-staging/Purple-Signature-Salon-v2.1.2-unsigned.apk release-staging/chunks
-          git commit -m "Stage unsigned Purple Signature v2.1.2 APK chunks" || exit 0
-          git push
+          ASSET="Purple-Signature-Salon-v2.1.2-unsigned.apk"
+          cp "$APK" "$ASSET"
+          gh release delete unsigned-v2.1.2-staging --yes --cleanup-tag || true
+          gh release create unsigned-v2.1.2-staging "$ASSET" \
+            --title "Unsigned Purple Signature v2.1.2 staging build" \
+            --notes "Temporary unsigned APK used only for final private release signing."
 
       - name: Upload unsigned release APK
         uses: actions/upload-artifact@v4
