@@ -1,0 +1,2 @@
+Build Purple Signature Salon v2.1.2 signed release APK.
+Requested after signing secrets were configured on 2026-07-13.
