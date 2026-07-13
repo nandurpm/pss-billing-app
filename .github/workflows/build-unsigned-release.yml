@@ -39,17 +39,28 @@ jobs:
       - name: Verify unsigned release APK
         run: ls -lh app/build/outputs/apk/release/app-release-unsigned.apk
 
-      - name: Publish temporary unsigned release asset
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Stage retrievable base64 chunks
         run: |
+          set -e
           APK="app/build/outputs/apk/release/app-release-unsigned.apk"
-          ASSET="Purple-Signature-Salon-v2.1.2-unsigned.apk"
-          cp "$APK" "$ASSET"
-          gh release delete unsigned-v2.1.2-staging --yes --cleanup-tag || true
-          gh release create unsigned-v2.1.2-staging "$ASSET" \
-            --title "Unsigned Purple Signature v2.1.2 staging build" \
-            --notes "Temporary unsigned APK used only for final private release signing."
+          rm -rf release-staging/chunks-small
+          mkdir -p release-staging/chunks-small/raw
+          base64 -w0 "$APK" > release-staging/chunks-small/all-base64.txt
+          split -b 4000 -d -a 3 --additional-suffix=.raw release-staging/chunks-small/all-base64.txt release-staging/chunks-small/raw/chunk-
+          rm release-staging/chunks-small/all-base64.txt
+          mkdir -p release-staging/chunks-small/formatted
+          for file in release-staging/chunks-small/raw/chunk-*.raw; do
+            name="$(basename "$file" .raw).txt"
+            fold -w 80 "$file" > "release-staging/chunks-small/formatted/$name"
+          done
+          rm -rf release-staging/chunks-small/raw
+          find release-staging/chunks-small/formatted -name 'chunk-*.txt' -printf '%f\n' | sort > release-staging/chunks-small/manifest.txt
+          sha256sum "$APK" > release-staging/chunks-small/unsigned-sha256.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f release-staging/chunks-small
+          git commit -m "Stage retrievable unsigned APK chunks" || exit 0
+          git push
 
       - name: Upload unsigned release APK
         uses: actions/upload-artifact@v4
