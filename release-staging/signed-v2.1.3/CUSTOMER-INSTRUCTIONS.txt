@@ -1,0 +1,21 @@
+PURPLE SIGNATURE SALON BILLING APP
+Version: 2.1.3
+
+ADMIN PIN
+123
+
+INSTALLATION / UPDATE
+1. Export a backup from Settings > Backup & Restore > Export All Data.
+2. Download Purple-Signature-Salon-v2.1.3.apk.
+3. Open the APK on the Android phone.
+4. Allow installation from this source when Android asks.
+5. Tap Update or Install, then Open.
+
+BACKUP
+Use Settings > Backup & Restore > Export All Data regularly.
+The backup is saved in Downloads/Purple Signature/Backups.
+Keep a copy in Google Drive, email, or another safe location.
+
+IMPORTANT UPDATE RULE
+DO NOT UNINSTALL THE APP DURING UPDATES.
+Install the newer APK directly over the existing app. Uninstalling can remove local bills and settings.
