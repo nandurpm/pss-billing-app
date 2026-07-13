@@ -8,7 +8,7 @@ on:
       - release-request.txt
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   release:
@@ -105,6 +105,24 @@ jobs:
           Install the newer APK directly over the existing app. Uninstalling can remove local bills and settings.
           EOF
           sha256sum "release-package/Purple-Signature-Salon-v2.1.2.apk" > release-package/SHA256SUMS.txt
+
+      - name: Stage signed APK for secure retrieval
+        run: |
+          APK="release-package/Purple-Signature-Salon-v2.1.2.apk"
+          OUT="release-staging/signed-v2.1.2"
+          rm -rf "$OUT"
+          mkdir -p "$OUT/chunks"
+          base64 -w0 "$APK" > "$OUT/all-base64.txt"
+          split -b 8000 -d -a 3 --additional-suffix=.txt "$OUT/all-base64.txt" "$OUT/chunks/chunk-"
+          rm "$OUT/all-base64.txt"
+          find "$OUT/chunks" -name 'chunk-*.txt' -printf '%f\n' | sort > "$OUT/chunks/manifest.txt"
+          sha256sum "$APK" > "$OUT/SHA256SUMS.txt"
+          cp release-package/CUSTOMER-INSTRUCTIONS.txt "$OUT/CUSTOMER-INSTRUCTIONS.txt"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f "$OUT"
+          git commit -m "Stage signed Purple Signature v2.1.2 APK" || exit 0
+          git push
 
       - name: Upload customer release package
         uses: actions/upload-artifact@v4
