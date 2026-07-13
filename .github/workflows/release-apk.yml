@@ -24,6 +24,37 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - name: Validate signing secrets
+        env:
+          KEYSTORE_BASE64: ${{ secrets.PSS_RELEASE_KEYSTORE_B64 }}
+          STORE_PASSWORD: ${{ secrets.PSS_RELEASE_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.PSS_RELEASE_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.PSS_RELEASE_KEY_PASSWORD }}
+        run: |
+          failed=0
+          [ -n "$KEYSTORE_BASE64" ] || { echo "::error title=Missing release secret::PSS_RELEASE_KEYSTORE_B64 is not configured"; failed=1; }
+          [ -n "$STORE_PASSWORD" ] || { echo "::error title=Missing release secret::PSS_RELEASE_STORE_PASSWORD is not configured"; failed=1; }
+          [ -n "$KEY_ALIAS" ] || { echo "::error title=Missing release secret::PSS_RELEASE_KEY_ALIAS is not configured"; failed=1; }
+          [ -n "$KEY_PASSWORD" ] || { echo "::error title=Missing release secret::PSS_RELEASE_KEY_PASSWORD is not configured"; failed=1; }
+          [ "$failed" -eq 0 ] || exit 1
+
+          mkdir -p "$RUNNER_TEMP/pss-signing"
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/pss-signing/PurpleSignatureRelease.jks"
+          test -s "$RUNNER_TEMP/pss-signing/PurpleSignatureRelease.jks" || {
+            echo "::error title=Invalid keystore secret::Decoded keystore is empty"
+            exit 1
+          }
+
+          keytool -list \
+            -keystore "$RUNNER_TEMP/pss-signing/PurpleSignatureRelease.jks" \
+            -storepass "$STORE_PASSWORD" \
+            -alias "$KEY_ALIAS" >/dev/null || {
+              echo "::error title=Signing key validation failed::Check the keystore Base64, store password and key alias"
+              exit 1
+            }
+
+          echo "Release signing key validated successfully."
+
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
@@ -34,14 +65,6 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.10.2'
-
-      - name: Restore release keystore
-        env:
-          KEYSTORE_BASE64: ${{ secrets.PSS_RELEASE_KEYSTORE_B64 }}
-        run: |
-          test -n "$KEYSTORE_BASE64" || { echo "Missing PSS_RELEASE_KEYSTORE_B64 secret"; exit 1; }
-          mkdir -p "$RUNNER_TEMP/pss-signing"
-          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/pss-signing/PurpleSignatureRelease.jks"
 
       - name: Build signed release APK
         env:
