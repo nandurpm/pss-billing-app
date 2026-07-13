@@ -112,6 +112,7 @@ jobs:
           OUT="release-staging/signed-v2.1.2"
           rm -rf "$OUT"
           mkdir -p "$OUT/chunks"
+          cp "$APK" "$OUT/Purple-Signature-Salon-v2.1.2.apk"
           base64 -w0 "$APK" > "$OUT/all-base64.txt"
           split -b 8000 -d -a 3 --additional-suffix=.txt "$OUT/all-base64.txt" "$OUT/chunks/chunk-"
           rm "$OUT/all-base64.txt"
@@ -121,7 +122,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -f "$OUT"
-          git commit -m "Stage signed Purple Signature v2.1.2 APK" || exit 0
+          git commit -m "Publish signed Purple Signature v2.1.2 APK" || exit 0
           git push
 
       - name: Upload customer release package
