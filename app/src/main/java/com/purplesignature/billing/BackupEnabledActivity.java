@@ -27,6 +27,7 @@ import java.nio.charset.StandardCharsets;
 public class BackupEnabledActivity extends MainActivity {
     private static final int REQUEST_IMPORT_BACKUP = 4401;
     private static final int MAX_BACKUP_BYTES = 50 * 1024 * 1024;
+    private static final String APP_URL = "file:///android_asset/www/index.html";
 
     private WebView backupWebView;
 
@@ -40,6 +41,13 @@ public class BackupEnabledActivity extends MainActivity {
             return;
         }
 
+        /*
+         * addJavascriptInterface only becomes visible to JavaScript after the
+         * WebView performs a page load. MainActivity starts its load before this
+         * subclass gets control, so the previous build registered NativeBackup
+         * too late. Register the bridge, install the final WebViewClient, and
+         * then load the page once more so NativeBackup exists from document start.
+         */
         backupWebView.addJavascriptInterface(new NativeBackupBridge(), "NativeBackup");
         backupWebView.setWebViewClient(new WebViewClient() {
             @Override
@@ -48,8 +56,7 @@ public class BackupEnabledActivity extends MainActivity {
                 installNativeBackupController();
             }
         });
-
-        installNativeBackupController();
+        backupWebView.loadUrl(APP_URL);
     }
 
     private WebView findWebView(View view) {
@@ -78,6 +85,7 @@ public class BackupEnabledActivity extends MainActivity {
 
     private void saveBackupJson(String json, String requestedFileName) {
         OutputStream output = null;
+        Uri pendingUri = null;
         try {
             JSONObject parsed = new JSONObject(json);
             if (!parsed.has("bills") || !parsed.has("settings")) {
@@ -86,6 +94,8 @@ public class BackupEnabledActivity extends MainActivity {
 
             String fileName = cleanBackupFileName(requestedFileName);
             byte[] bytes = json.getBytes(StandardCharsets.UTF_8);
+            if (bytes.length == 0) throw new Exception("Backup is empty");
+            if (bytes.length > MAX_BACKUP_BYTES) throw new Exception("Backup is larger than 50 MB");
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 ContentValues values = new ContentValues();
@@ -94,10 +104,10 @@ public class BackupEnabledActivity extends MainActivity {
                 values.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/Purple Signature/Backups");
                 values.put(MediaStore.MediaColumns.IS_PENDING, 1);
 
-                Uri uri = getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
-                if (uri == null) throw new Exception("Cannot create backup file");
+                pendingUri = getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
+                if (pendingUri == null) throw new Exception("Cannot create backup file");
 
-                output = getContentResolver().openOutputStream(uri);
+                output = getContentResolver().openOutputStream(pendingUri, "w");
                 if (output == null) throw new Exception("Cannot open backup file");
                 output.write(bytes);
                 output.flush();
@@ -106,7 +116,7 @@ public class BackupEnabledActivity extends MainActivity {
 
                 values.clear();
                 values.put(MediaStore.MediaColumns.IS_PENDING, 0);
-                getContentResolver().update(uri, values, null, null);
+                getContentResolver().update(pendingUri, values, null, null);
             } else {
                 File directory = new File(
                         Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
@@ -115,7 +125,8 @@ public class BackupEnabledActivity extends MainActivity {
                 if (!directory.exists() && !directory.mkdirs()) {
                     throw new Exception("Cannot create backup folder");
                 }
-                output = new FileOutputStream(new File(directory, fileName));
+                File target = new File(directory, fileName);
+                output = new FileOutputStream(target, false);
                 output.write(bytes);
                 output.flush();
                 output.close();
@@ -125,6 +136,9 @@ public class BackupEnabledActivity extends MainActivity {
             notifyExportFinished(true, "Backup saved in Downloads/Purple Signature/Backups");
             Toast.makeText(this, "Backup exported successfully", Toast.LENGTH_LONG).show();
         } catch (Exception error) {
+            if (pendingUri != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                try { getContentResolver().delete(pendingUri, null, null); } catch (Exception ignored) {}
+            }
             notifyExportFinished(false, "Backup export failed: " + error.getMessage());
             Toast.makeText(this, "Backup export failed: " + error.getMessage(), Toast.LENGTH_LONG).show();
         } finally {
@@ -139,7 +153,7 @@ public class BackupEnabledActivity extends MainActivity {
         try {
             Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
             intent.addCategory(Intent.CATEGORY_OPENABLE);
-            intent.setType("application/json");
+            intent.setType("*/*");
             intent.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{
                     "application/json",
                     "text/json",
@@ -163,6 +177,11 @@ public class BackupEnabledActivity extends MainActivity {
         }
 
         Uri uri = data.getData();
+        try {
+            getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        } catch (Exception ignored) {
+        }
+
         try {
             String json = readBackupText(uri);
             JSONObject parsed = new JSONObject(json);
@@ -237,7 +256,7 @@ public class BackupEnabledActivity extends MainActivity {
                 "try{" +
                 "exportButton.disabled=true;exportButton.textContent='Exporting...';" +
                 "var bills=await allBills();" +
-                "var backup=JSON.stringify({version:4,exportedAt:new Date().toISOString(),settings:settings,bills:bills},null,2);" +
+                "var backup=JSON.stringify({version:5,exportedAt:new Date().toISOString(),settings:settings,bills:bills},null,2);" +
                 "window.NativeBackup.exportBackup(backup,'purple-signature-backup-'+today()+'.json');" +
                 "}catch(error){exportButton.disabled=false;exportButton.textContent='Export All Data';if(typeof toast==='function')toast('Backup export failed: '+error.message,'error');}" +
                 "};" +
@@ -255,7 +274,7 @@ public class BackupEnabledActivity extends MainActivity {
     private void notifyExportFinished(boolean success, String message) {
         if (backupWebView == null) return;
         backupWebView.evaluateJavascript(
-                "window.nativeBackupExportFinished(" + success + "," + JSONObject.quote(message) + ");",
+                "if(window.nativeBackupExportFinished){window.nativeBackupExportFinished(" + success + "," + JSONObject.quote(message) + ");}",
                 null
         );
     }
@@ -272,7 +291,7 @@ public class BackupEnabledActivity extends MainActivity {
         String name = requestedFileName == null ? "" : requestedFileName.trim();
         if (name.isEmpty()) name = "purple-signature-backup.json";
         name = name.replaceAll("[^A-Za-z0-9._-]", "_");
-        if (!name.toLowerCase().endsWith(".json")) name += ".json";
+        if (!name.toLowerCase(Locale.US).endsWith(".json")) name += ".json";
         return name;
     }
 }
