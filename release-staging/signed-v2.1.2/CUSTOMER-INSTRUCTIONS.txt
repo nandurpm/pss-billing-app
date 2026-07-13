@@ -1,0 +1,21 @@
+PURPLE SIGNATURE SALON BILLING APP
+Version: 2.1.2
+
+ADMIN PIN
+123
+
+INSTALLATION
+1. Download Purple-Signature-Salon-v2.1.2.apk.
+2. Open the APK on the Android phone.
+3. Allow installation from this source when Android asks.
+4. Tap Install, then Open.
+5. Open Settings inside the app and change the Admin PIN after handover.
+
+BACKUP
+Use Settings > Backup & Restore > Export All Data regularly.
+Keep the exported JSON backup in Google Drive, email, or another safe location.
+Export a fresh backup before every app update or phone change.
+
+IMPORTANT UPDATE RULE
+DO NOT UNINSTALL THE APP DURING UPDATES.
+Install the newer APK directly over the existing app. Uninstalling can remove local bills and settings.
