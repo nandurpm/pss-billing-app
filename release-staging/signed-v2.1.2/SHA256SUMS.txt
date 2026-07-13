@@ -1,1 +1,1 @@
-9a18cbf8d059055fc9f91c5bf62a30b5375554453577b4ba7cbec6a2ff7ebf01  release-package/Purple-Signature-Salon-v2.1.2.apk
+6722643880f8c938a60efeda7a3d29bd15169eafd2ad9fe3af2ddc6b5d8a6492  release-package/Purple-Signature-Salon-v2.1.2.apk
