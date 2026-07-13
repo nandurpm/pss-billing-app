@@ -23,6 +23,7 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 
 public class BackupEnabledActivity extends MainActivity {
     private static final int REQUEST_IMPORT_BACKUP = 4401;
