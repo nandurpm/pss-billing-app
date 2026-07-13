@@ -1,0 +1,91 @@
+name: Build Signed Release APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - release-request.txt
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        run: sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+
+      - name: Restore release keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.PSS_RELEASE_KEYSTORE_B64 }}
+        run: |
+          test -n "$KEYSTORE_BASE64" || { echo "Missing PSS_RELEASE_KEYSTORE_B64 secret"; exit 1; }
+          mkdir -p "$RUNNER_TEMP/pss-signing"
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/pss-signing/PurpleSignatureRelease.jks"
+
+      - name: Build signed release APK
+        env:
+          PSS_RELEASE_STORE_FILE: ${{ runner.temp }}/pss-signing/PurpleSignatureRelease.jks
+          PSS_RELEASE_STORE_PASSWORD: ${{ secrets.PSS_RELEASE_STORE_PASSWORD }}
+          PSS_RELEASE_KEY_ALIAS: ${{ secrets.PSS_RELEASE_KEY_ALIAS }}
+          PSS_RELEASE_KEY_PASSWORD: ${{ secrets.PSS_RELEASE_KEY_PASSWORD }}
+        run: gradle :app:assembleRelease --no-daemon --stacktrace
+
+      - name: Verify signature and prepare customer package
+        run: |
+          APK="app/build/outputs/apk/release/app-release.apk"
+          test -f "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$APK"
+          mkdir -p release-package
+          cp "$APK" "release-package/Purple-Signature-Salon-v2.1.2.apk"
+          cat > release-package/CUSTOMER-INSTRUCTIONS.txt <<'EOF'
+          PURPLE SIGNATURE SALON BILLING APP
+          Version: 2.1.2
+
+          ADMIN PIN
+          123
+
+          INSTALLATION
+          1. Download Purple-Signature-Salon-v2.1.2.apk.
+          2. Open the APK on the Android phone.
+          3. Allow installation from this source when Android asks.
+          4. Tap Install, then Open.
+          5. Open Settings inside the app and change the Admin PIN after handover.
+
+          BACKUP
+          Use Settings > Backup & Restore > Export All Data regularly.
+          Keep the exported JSON backup in Google Drive, email, or another safe location.
+          Export a fresh backup before every app update or phone change.
+
+          IMPORTANT UPDATE RULE
+          DO NOT UNINSTALL THE APP DURING UPDATES.
+          Install the newer APK directly over the existing app. Uninstalling can remove local bills and settings.
+          EOF
+          sha256sum "release-package/Purple-Signature-Salon-v2.1.2.apk" > release-package/SHA256SUMS.txt
+
+      - name: Upload customer release package
+        uses: actions/upload-artifact@v4
+        with:
+          name: Purple-Signature-Salon-v2.1.2-release
+          path: release-package/
+          retention-days: 90
