@@ -2,6 +2,11 @@ plugins {
     id 'com.android.application'
 }
 
+def releaseStoreFilePath = System.getenv('PSS_RELEASE_STORE_FILE')
+def releaseStorePassword = System.getenv('PSS_RELEASE_STORE_PASSWORD')
+def releaseKeyAlias = System.getenv('PSS_RELEASE_KEY_ALIAS')
+def releaseKeyPassword = System.getenv('PSS_RELEASE_KEY_PASSWORD')
+
 android {
     namespace 'com.purplesignature.billing'
     compileSdk 35
@@ -12,6 +17,26 @@ android {
         targetSdk 35
         versionCode 9
         versionName '2.1.2'
+    }
+
+    signingConfigs {
+        if (releaseStoreFilePath && releaseStorePassword && releaseKeyAlias && releaseKeyPassword) {
+            release {
+                storeFile file(releaseStoreFilePath)
+                storePassword releaseStorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            if (releaseStoreFilePath && releaseStorePassword && releaseKeyAlias && releaseKeyPassword) {
+                signingConfig signingConfigs.release
+            }
+        }
     }
 
     compileOptions {
