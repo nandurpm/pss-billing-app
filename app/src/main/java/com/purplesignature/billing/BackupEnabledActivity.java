@@ -1,3 +1,8 @@
+/*
+ * FILE: BackupEnabledActivity.java
+ * FILE PURPOSE: Hand-maintained java source for the `app/src/main/java/com/purplesignature/billing` responsibility.
+ */
+
 package com.purplesignature.billing;
 
 import android.app.Activity;

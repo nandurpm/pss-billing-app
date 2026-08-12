@@ -16,11 +16,36 @@ This repository contains the Android billing app for Purple Signature Salon.
 - Purple Signature Salon logo asset added.
 - Android launcher icon added.
 
-## Admin login
+## Admin access
 
-Username: `ps`
+Admin access is configured by the application and must not be documented with a shared username or password. Set or rotate credentials through the project’s secure administrative process; never commit real credentials to this repository or distribute them in an APK README.
 
-Password: `123`
+## Repository Architecture
+
+The APK is a native Android shell around a bundled web billing application. `MainActivity.java` and `BackupEnabledActivity.java` provide the Android/WebView host layer, while `app/src/main/assets/www/` contains the business interface and local billing behavior. Gradle and GitHub Actions build the Android package; `release-staging/` stores generated distribution artifacts.
+
+| Area | Responsibility | Change boundary |
+| --- | --- | --- |
+| `app/src/main/java/com/purplesignature/billing/` | Android lifecycle and WebView host | Platform integration only |
+| `app/src/main/assets/www/` | Billing screens, invoice workflows, salon settings, and local data handling | Web application behavior |
+| `app/src/main/res/` | Android strings, styles, and launcher resources | Platform resources |
+| `app/build.gradle` | Android namespace, SDK levels, version, and signing environment contract | Build configuration |
+| `.github/workflows/` | Debug and release automation | CI/CD behavior |
+| `release-staging/` | Generated APKs, checksums, instructions, and chunks | Distribution artifacts, not source |
+
+## Local Development and Validation
+
+The repository is built with Gradle and Android SDK 35 using Java 17. The canonical CI command is:
+
+```bash
+gradle :app:assembleDebug --no-daemon --stacktrace
+```
+
+The debug APK is written to `app/build/outputs/apk/debug/app-debug.apk`. The repository also provides separate workflows for unsigned and signed releases. Release signing is conditional on `PSS_RELEASE_STORE_FILE`, `PSS_RELEASE_STORE_PASSWORD`, `PSS_RELEASE_KEY_ALIAS`, and `PSS_RELEASE_KEY_PASSWORD`; keep those values in protected CI secrets or a secure local environment, never in tracked files.
+
+## Data and Security Boundary
+
+The embedded web app stores billing history locally through IndexedDB and can display or modify salon configuration. Treat invoices, customer details, payment QR assets, and admin settings as sensitive business data. Do not publish real customer information, credentials, private signing material, or production database exports in source control or release artifacts.
 
 ## APK build
 

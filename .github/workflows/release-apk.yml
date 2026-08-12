@@ -1,3 +1,6 @@
+# FILE: release-apk.yml
+# FILE PURPOSE: Hand-maintained yml source for the `.github/workflows` responsibility.
+
 name: Build Signed Release APK
 
 on:

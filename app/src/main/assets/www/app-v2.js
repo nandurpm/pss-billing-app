@@ -1,3 +1,8 @@
+/*
+ * FILE: app-v2.js
+ * FILE PURPOSE: Hand-maintained js source for the `app/src/main/assets/www` responsibility.
+ */
+
 'use strict';
 
 const DB_NAME = 'PSS_BILLING_DB';

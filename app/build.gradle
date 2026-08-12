@@ -1,3 +1,8 @@
+/*
+ * FILE: build.gradle
+ * FILE PURPOSE: Hand-maintained gradle source for the `app` responsibility.
+ */
+
 plugins {
     id 'com.android.application'
 }

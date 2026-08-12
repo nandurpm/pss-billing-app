@@ -1,3 +1,6 @@
+# FILE: build-unsigned-release.yml
+# FILE PURPOSE: Hand-maintained yml source for the `.github/workflows` responsibility.
+
 name: Build Unsigned Release APK
 
 on:

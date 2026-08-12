@@ -1,3 +1,6 @@
+# FILE: unpack-project.yml
+# FILE PURPOSE: Hand-maintained yml source for the `.github/workflows` responsibility.
+
 name: Unpack Uploaded Android Project
 
 on:
