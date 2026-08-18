@@ -49,8 +49,10 @@ FILE PURPOSE: Hand-maintained html source for the `app/src/main/assets/www` resp
               <label class="full">Notes<textarea id="notes" placeholder="Package, balance or customer note"></textarea></label>
             </div>
 
-            <div class="section-head gap-top"><h2>Services</h2><span class="muted">Tap to add</span></div>
-            <div class="service-grid" id="serviceButtons"></div>
+            <div class="section-head gap-top"><h2>Services</h2><span class="muted">Search to add</span></div>
+            <div class="service-search">
+              <label>Search services<input id="serviceSearch" type="search" placeholder="Type a service name" autocomplete="off"></label>
+            </div>
             <div class="manual-row">
               <label>Service<select id="itemSelect"></select></label>
               <label>Qty<input id="itemQty" type="number" min="1" value="1"></label>

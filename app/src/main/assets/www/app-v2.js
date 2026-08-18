@@ -55,6 +55,15 @@ function safe(value) {
   }[char]));
 }
 
+function isValidQrDataUri(value) {
+  return /^data:image\/[a-z0-9.+-]+;base64,[a-z0-9+/]+={0,2}$/i.test(String(value || ''));
+}
+
+function normalizeQr(value) {
+  const qr = String(value || '');
+  return isValidQrDataUri(qr) ? qr : '';
+}
+
 function slug(value, fallback) {
   const normalized = String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   return normalized || fallback;
@@ -114,6 +123,10 @@ function normalizeSettings(raw) {
     rate: Math.max(0, Number(service.rate) || 0),
     active: service.active !== false
   }));
+
+  merged.qr = normalizeQr(merged.qr);
+  if (!merged.staff.some(member => member.active !== false)) merged.staff[0].active = true;
+  if (!merged.services.some(service => service.active !== false)) merged.services[0].active = true;
 
   merged.gstEnabled = Boolean(merged.gstEnabled);
   merged.gstPercent = Math.min(100, Math.max(0, Number(merged.gstPercent) || 0));
@@ -397,14 +410,18 @@ function billData() {
     staffId: staff.id,
     payment: normalizePayment($('payment').value),
     notes: $('notes').value.trim(),
-    items: items.map(item => ({
-      serviceId: item.serviceId || slug(item.name, 'service'),
-      name: String(item.name || 'Item'),
-      category: String(item.category || 'Other'),
-      qty: Math.max(0, Number(item.qty) || 0),
-      rate: Math.max(0, Number(item.rate) || 0),
-      total: Math.max(0, Number(item.qty) || 0) * Math.max(0, Number(item.rate) || 0)
-    })),
+    items: items.map(item => {
+      const qty = Math.max(1, Number(item.qty) || 1);
+      const rate = Math.max(0, Number(item.rate) || 0);
+      return {
+        serviceId: item.serviceId || slug(item.name, 'service'),
+        name: String(item.name || 'Item'),
+        category: String(item.category || 'Other'),
+        qty,
+        rate,
+        total: qty * rate
+      };
+    }),
     ...calculateTotals(),
     status: 'SAVED',
     settingsSnapshot: settingsSnapshot()
@@ -436,7 +453,7 @@ function validateCurrentBill(requireMobileForShare = false) {
 
   if (!items.length) {
     toast('Add at least one service before continuing', 'error');
-    $('serviceButtons').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    $('serviceSearch').scrollIntoView({ behavior: 'smooth', block: 'center' });
     return false;
   }
 
@@ -501,43 +518,35 @@ function renderStaffOptions() {
 
 function renderServices() {
   const services = activeServices();
-  $('serviceButtons').innerHTML = services.map(service => `<button class="service-btn" data-service-id="${safe(service.id)}">${safe(service.name)}<span>${money(service.rate)}</span></button>`).join('');
-  $('itemSelect').innerHTML = services.map(service => `<option value="${safe(service.id)}">${safe(service.name)} - ${money(service.rate)}</option>`).join('');
+  const query = $('serviceSearch').value.trim().toLowerCase();
+  const selectedId = $('itemSelect').value;
+  const visibleServices = query ? services.filter(service =>
+    String(service.name || '').toLowerCase().includes(query) ||
+    String(service.category || '').toLowerCase().includes(query)
+  ) : services;
 
-  document.querySelectorAll('[data-service-id]').forEach(button => {
-    button.onclick = () => {
-      const service = services.find(item => item.id === button.dataset.serviceId);
-      if (service) addItem(service);
-    };
-  });
+  $('itemSelect').innerHTML = visibleServices.length
+    ? visibleServices.map(service => `<option value="${safe(service.id)}">${safe(service.name)} - ${money(service.rate)}</option>`).join('')
+    : '<option value="">No matching services</option>';
+
+  const selectedService = visibleServices.find(service => service.id === selectedId) || visibleServices[0];
+  if (selectedService) {
+    $('itemSelect').value = selectedService.id;
+    if (selectedService.id !== selectedId) $('itemRate').value = selectedService.rate;
+  }
 
   $('itemSelect').onchange = () => {
-    const service = services.find(item => item.id === $('itemSelect').value);
+    const service = visibleServices.find(item => item.id === $('itemSelect').value);
     if (service) $('itemRate').value = service.rate;
   };
-
-  if (services[0]) {
-    $('itemSelect').value = services[0].id;
-    $('itemRate').value = services[0].rate;
-  }
-}
-
-function addItem(service) {
-  items.push({
-    serviceId: service.id,
-    name: service.name,
-    category: service.category || 'Other',
-    qty: 1,
-    rate: Math.max(0, Number(service.rate) || 0)
-  });
-  dirty = true;
-  renderItems();
-  renderInvoice();
 }
 
 function addSelectedItem() {
   const service = activeServices().find(item => item.id === $('itemSelect').value);
-  if (!service) return;
+  if (!service) {
+    toast('Select a matching service before adding an item', 'error');
+    return;
+  }
   items.push({
     serviceId: service.id,
     name: service.name,
@@ -551,24 +560,32 @@ function addSelectedItem() {
 }
 
 function renderItems() {
-  $('itemsBody').innerHTML = items.length ? items.map((item, index) => `
+  $('itemsBody').innerHTML = items.length ? items.map((item, index) => {
+    const qty = Math.max(1, Number(item.qty) || 1);
+    const rate = Math.max(0, Number(item.rate) || 0);
+    return `
     <tr>
       <td><input value="${safe(item.name)}" data-item-index="${index}" data-item-key="name"></td>
-      <td><input type="number" min="1" value="${item.qty}" data-item-index="${index}" data-item-key="qty"></td>
-      <td><input type="number" min="0" value="${item.rate}" data-item-index="${index}" data-item-key="rate"></td>
-      <td>${money((Number(item.qty) || 0) * (Number(item.rate) || 0))}</td>
+      <td><input type="number" min="1" value="${qty}" data-item-index="${index}" data-item-key="qty"></td>
+      <td><input type="number" min="0" value="${rate}" data-item-index="${index}" data-item-key="rate"></td>
+      <td>${money(qty * rate)}</td>
       <td><button class="btn danger small" data-remove-item="${index}">×</button></td>
     </tr>
-  `).join('') : '<tr><td colspan="5" class="empty">No items added</td></tr>';
+  `;
+  }).join('') : '<tr><td colspan="5" class="empty">No items added</td></tr>';
 
   document.querySelectorAll('#itemsBody input').forEach(input => {
     input.oninput = () => {
       const index = Number(input.dataset.itemIndex);
       const key = input.dataset.itemKey;
-      items[index][key] = key === 'name' ? input.value : Math.max(0, Number(input.value) || 0);
+      if (!items[index]) return;
+      items[index][key] = key === 'name'
+        ? input.value
+        : key === 'qty'
+          ? Math.max(1, Number(input.value) || 1)
+          : Math.max(0, Number(input.value) || 0);
       dirty = true;
       renderInvoice();
-      if (key !== 'name') renderItems();
     };
   });
 
@@ -588,7 +605,7 @@ function invoiceHtml(bill, shop) {
     <tr><td>${safe(item.name)}</td><td>${safe(item.qty)}</td><td>${money(item.rate)}</td><td>${money((Number(item.qty) || 0) * (Number(item.rate) || 0))}</td></tr>
   `).join('') || '<tr><td colspan="4">No items</td></tr>';
   const taxRow = shop.gstEnabled && Number(bill.tax) > 0 ? `<div class="sum-row"><span>GST ${bill.tax}%</span><b>${money(bill.taxAmount)}</b></div>` : '';
-  const qr = shop.qr ? `<img class="qr-img" src="${shop.qr}" alt="Payment QR">` : '';
+  const qr = isValidQrDataUri(shop.qr) ? `<img class="qr-img" src="${safe(shop.qr)}" alt="Payment QR">` : '';
 
   return `
     <div class="invoice-logo"><img src="banner.svg" alt="Purple Signature Salon"></div>
@@ -630,6 +647,8 @@ async function resetBill(ask = true) {
   $('discount').value = 0;
   $('notes').value = '';
   $('itemQty').value = 1;
+  $('itemRate').value = 0;
+  $('serviceSearch').value = '';
   await assignNewInvoiceNumber();
   dirty = false;
   renderItems();
@@ -769,11 +788,16 @@ async function editBill(invoiceNumber) {
 
 async function removeBill(invoiceNumber) {
   if (!confirm('Delete bill ' + invoiceNumber + '?')) return;
-  await deleteBillDb(invoiceNumber);
-  reservedInvoiceNumbers.delete(invoiceNumber);
-  await renderHistory();
-  await renderTodaySummary();
-  toast('Bill deleted', 'success');
+  try {
+    await deleteBillDb(invoiceNumber);
+    reservedInvoiceNumbers.delete(invoiceNumber);
+    await renderHistory();
+    await renderTodaySummary();
+    toast('Bill deleted', 'success');
+  } catch (error) {
+    console.error('Bill delete failed', error);
+    toast('Bill delete failed: ' + (error.message || 'Unknown database error'), 'error');
+  }
 }
 
 function nativePayload(bill) {
@@ -815,13 +839,17 @@ async function renderTodaySummary() {
   $('todaySummaryDate').textContent = new Date(today() + 'T00:00:00').toLocaleDateString('en-IN', { dateStyle: 'medium' });
 }
 
+function localDateKey(date) {
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+}
+
 function weekKey(dateString) {
   const date = new Date(dateString + 'T00:00:00');
   const day = (date.getDay() + 6) % 7;
   date.setDate(date.getDate() - day);
-  const start = date.toISOString().slice(0, 10);
+  const start = localDateKey(date);
   date.setDate(date.getDate() + 6);
-  return start + ' to ' + date.toISOString().slice(0, 10);
+  return start + ' to ' + localDateKey(date);
 }
 
 async function setRange(type) {
@@ -999,7 +1027,7 @@ function fillSettings() {
   $('setAddress').value = settings.address;
   $('gstEnabled').checked = Boolean(settings.gstEnabled);
   $('gstPercent').value = settings.gstPercent || 0;
-  $('qrPreview').innerHTML = settings.qr ? `<img class="qr-img" src="${settings.qr}" alt="QR preview">` : '';
+  $('qrPreview').innerHTML = isValidQrDataUri(settings.qr) ? `<img class="qr-img" src="${safe(settings.qr)}" alt="QR preview">` : '';
   renderStaffSettings();
   renderServiceSettings();
 }
@@ -1016,11 +1044,13 @@ function renderStaffSettings() {
   document.querySelectorAll('[data-remove-staff]').forEach(button => {
     button.onclick = () => {
       const index = Number(button.dataset.removeStaff);
-      if (settings.staff.length <= 1) {
-        toast('At least one staff member is required', 'error');
+      const member = settings.staff[index];
+      if (!member) return;
+      if (member.active !== false && activeStaff().length <= 1) {
+        toast('At least one active staff member is required', 'error');
         return;
       }
-      settings.staff[index].active = false;
+      member.active = false;
       renderStaffSettings();
     };
   });
@@ -1039,33 +1069,68 @@ function renderServiceSettings() {
 
   document.querySelectorAll('[data-remove-service]').forEach(button => {
     button.onclick = () => {
-      settings.services.splice(Number(button.dataset.removeService), 1);
+      const index = Number(button.dataset.removeService);
+      const service = settings.services[index];
+      if (!service) return;
+      if (service.active !== false && activeServices().length <= 1) {
+        toast('At least one active service is required', 'error');
+        return;
+      }
+      settings.services.splice(index, 1);
       renderServiceSettings();
     };
   });
 }
 
 function readSettingsForm() {
-  settings.businessName = $('setBusiness').value.trim() || DEFAULT_SETTINGS.businessName;
-  settings.tagline = $('setTagline').value.trim() || DEFAULT_SETTINGS.tagline;
-  settings.phone = $('setPhone').value.trim();
-  settings.address = $('setAddress').value.trim();
-  settings.gstEnabled = $('gstEnabled').checked;
-  settings.gstPercent = Math.min(100, Math.max(0, Number($('gstPercent').value) || 0));
+  const nextSettings = clone(settings);
+  nextSettings.businessName = $('setBusiness').value.trim() || DEFAULT_SETTINGS.businessName;
+  nextSettings.tagline = $('setTagline').value.trim() || DEFAULT_SETTINGS.tagline;
+  nextSettings.phone = $('setPhone').value.trim();
+  nextSettings.address = $('setAddress').value.trim();
+  nextSettings.gstEnabled = $('gstEnabled').checked;
+  nextSettings.gstPercent = Math.min(100, Math.max(0, Number($('gstPercent').value) || 0));
 
   document.querySelectorAll('[data-staff-name]').forEach(input => {
-    const member = settings.staff[Number(input.dataset.staffName)];
-    member.name = input.value.trim().toUpperCase() || member.id;
+    const member = nextSettings.staff[Number(input.dataset.staffName)];
+    if (member) member.name = input.value.trim().toUpperCase() || member.id;
   });
-  document.querySelectorAll('[data-staff-active]').forEach(input => settings.staff[Number(input.dataset.staffActive)].active = input.checked);
-  document.querySelectorAll('[data-service-name]').forEach(input => settings.services[Number(input.dataset.serviceName)].name = input.value.trim() || 'Service');
-  document.querySelectorAll('[data-service-category]').forEach(input => settings.services[Number(input.dataset.serviceCategory)].category = input.value.trim() || 'Other');
-  document.querySelectorAll('[data-service-rate]').forEach(input => settings.services[Number(input.dataset.serviceRate)].rate = Math.max(0, Number(input.value) || 0));
-  document.querySelectorAll('[data-service-active]').forEach(input => settings.services[Number(input.dataset.serviceActive)].active = input.checked);
+  document.querySelectorAll('[data-staff-active]').forEach(input => {
+    const member = nextSettings.staff[Number(input.dataset.staffActive)];
+    if (member) member.active = input.checked;
+  });
+  document.querySelectorAll('[data-service-name]').forEach(input => {
+    const service = nextSettings.services[Number(input.dataset.serviceName)];
+    if (service) service.name = input.value.trim() || 'Service';
+  });
+  document.querySelectorAll('[data-service-category]').forEach(input => {
+    const service = nextSettings.services[Number(input.dataset.serviceCategory)];
+    if (service) service.category = input.value.trim() || 'Other';
+  });
+  document.querySelectorAll('[data-service-rate]').forEach(input => {
+    const service = nextSettings.services[Number(input.dataset.serviceRate)];
+    if (service) service.rate = Math.max(0, Number(input.value) || 0);
+  });
+  document.querySelectorAll('[data-service-active]').forEach(input => {
+    const service = nextSettings.services[Number(input.dataset.serviceActive)];
+    if (service) service.active = input.checked;
+  });
+
+  if (!nextSettings.staff.some(member => member.active !== false)) {
+    toast('At least one active staff member is required', 'error');
+    return false;
+  }
+  if (!nextSettings.services.some(service => service.active !== false)) {
+    toast('At least one active service is required', 'error');
+    return false;
+  }
+
+  settings = nextSettings;
+  return true;
 }
 
 function saveSettings() {
-  readSettingsForm();
+  if (!readSettingsForm()) return;
   saveSettingsLocal();
   renderStaffOptions();
   renderServices();
@@ -1208,6 +1273,7 @@ function importBackupFile(file) {
 
 function bindEvents() {
   $('addItemBtn').onclick = addSelectedItem;
+  $('serviceSearch').oninput = renderServices;
   $('saveBillBtn').onclick = saveBill;
   $('newBillBtn').onclick = () => resetBill(true);
   $('printBillBtn').onclick = () => {
@@ -1253,8 +1319,13 @@ function bindEvents() {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
-      settings.qr = reader.result;
-      $('qrPreview').innerHTML = `<img class="qr-img" src="${settings.qr}" alt="QR preview">`;
+      const qr = normalizeQr(reader.result);
+      if (!qr) {
+        toast('Payment QR must be a valid image', 'error');
+        return;
+      }
+      settings.qr = qr;
+      $('qrPreview').innerHTML = `<img class="qr-img" src="${safe(settings.qr)}" alt="QR preview">`;
     };
     reader.readAsDataURL(file);
   };
