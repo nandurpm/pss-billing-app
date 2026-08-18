@@ -83,17 +83,17 @@ jobs:
           test -f "$APK"
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$APK"
           mkdir -p release-package
-          cp "$APK" "release-package/Purple-Signature-Salon-v2.1.4.apk"
+          cp "$APK" "release-package/Purple-Signature-Salon-v2.1.5.apk"
           cat > release-package/CUSTOMER-INSTRUCTIONS.txt <<'EOF'
           PURPLE SIGNATURE SALON BILLING APP
-          Version: 2.1.4
+          Version: 2.1.5
 
           ADMIN PIN
           123
 
           INSTALLATION / UPDATE
           1. Export a backup from Settings > Backup & Restore > Export All Data.
-          2. Download Purple-Signature-Salon-v2.1.4.apk.
+          2. Download Purple-Signature-Salon-v2.1.5.apk.
           3. Open the APK on the Android phone.
           4. Allow installation from this source when Android asks.
           5. Tap Update or Install, then Open.
@@ -107,15 +107,15 @@ jobs:
           DO NOT UNINSTALL THE APP DURING UPDATES.
           Install the newer APK directly over the existing app. Uninstalling can remove local bills and settings.
           EOF
-          sha256sum "release-package/Purple-Signature-Salon-v2.1.4.apk" > release-package/SHA256SUMS.txt
+          sha256sum "release-package/Purple-Signature-Salon-v2.1.5.apk" > release-package/SHA256SUMS.txt
 
       - name: Stage signed APK for secure retrieval
         run: |
-          APK="release-package/Purple-Signature-Salon-v2.1.4.apk"
-          OUT="release-staging/signed-v2.1.4"
+          APK="release-package/Purple-Signature-Salon-v2.1.5.apk"
+          OUT="release-staging/signed-v2.1.5"
           rm -rf "$OUT"
           mkdir -p "$OUT/chunks"
-          cp "$APK" "$OUT/Purple-Signature-Salon-v2.1.4.apk"
+          cp "$APK" "$OUT/Purple-Signature-Salon-v2.1.5.apk"
           base64 -w0 "$APK" > "$OUT/all-base64.txt"
           split -b 8000 -d -a 3 --additional-suffix=.txt "$OUT/all-base64.txt" "$OUT/chunks/chunk-"
           rm "$OUT/all-base64.txt"
@@ -125,12 +125,12 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -f "$OUT"
-          git commit -m "Publish signed Purple Signature v2.1.4 APK" || exit 0
+          git commit -m "Publish signed Purple Signature v2.1.5 APK" || exit 0
           git push
 
       - name: Upload customer release package
         uses: actions/upload-artifact@v4
         with:
-          name: Purple-Signature-Salon-v2.1.4-release
+          name: Purple-Signature-Salon-v2.1.5-release
           path: release-package/
           retention-days: 90

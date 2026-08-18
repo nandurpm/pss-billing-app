@@ -50,13 +50,14 @@ FILE PURPOSE: Hand-maintained html source for the `app/src/main/assets/www` resp
             </div>
 
             <div class="section-head gap-top"><h2>Services</h2><span class="muted">Search to add</span></div>
-            <div class="service-search">
-              <label>Search services<input id="serviceSearch" type="search" placeholder="Type a service name" autocomplete="off"></label>
-            </div>
             <div class="manual-row">
-              <label>Service<select id="itemSelect"></select></label>
+              <label class="service-picker">Service
+                <input id="itemServiceSearch" type="search" placeholder="Search service" autocomplete="off">
+                <select id="itemSelect"></select>
+              </label>
               <label>Qty<input id="itemQty" type="number" min="1" value="1"></label>
               <label>Rate ₹<input id="itemRate" type="number" min="0" value="0"></label>
+              <label>Total ₹<output id="itemTotal">₹0.00</output></label>
               <button class="btn primary" id="addItemBtn">Add Item</button>
             </div>
 
@@ -82,7 +83,10 @@ FILE PURPOSE: Hand-maintained html source for the `app/src/main/assets/www` resp
             </section>
             <section class="card">
               <div class="section-head"><h2>Saved Bills</h2><span class="muted" id="billCount">0 bills</span></div>
-              <div class="search-row"><input id="billSearch" placeholder="Name / mobile / invoice"><input id="billSearchDate" type="date"></div>
+              <div class="search-row">
+                <label>Search saved bills<input id="billSearch" placeholder="Name / mobile / invoice"></label>
+                <label>Select date<input id="billSearchDate" type="date" aria-label="Select date"></label>
+              </div>
               <div class="history" id="billHistory"></div>
             </section>
           </aside>

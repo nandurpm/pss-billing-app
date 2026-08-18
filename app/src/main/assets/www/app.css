@@ -57,8 +57,10 @@ button{cursor:pointer}
 .full{grid-column:1/-1}
 
 .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;width:100%;max-width:100%;min-width:0}
-.form-grid label,.manual-row label,.filters label,.settings-grid label,.service-search label{font-size:12px;font-weight:800;color:#51305b;min-width:0}
+.form-grid label,.manual-row label,.filters label,.settings-grid label,.service-search label,.search-row label{font-size:12px;font-weight:800;color:#51305b;min-width:0}
 .form-grid input,.form-grid select,.form-grid textarea,.manual-row input,.manual-row select,.filters input,.filters select,.settings-grid input,.settings-grid select,.settings-grid textarea,.search-row input,.unlock-row input,.stack input,.service-search input{width:100%;max-width:100%;min-width:0;margin-top:6px;border:1px solid var(--line);border-radius:13px;padding:11px 12px;background:white;outline:none;color:var(--ink)}
+.manual-row .service-picker select{margin-top:6px}
+.manual-row output{display:block;width:100%;max-width:100%;min-width:0;margin-top:6px;border:1px solid var(--line);border-radius:13px;padding:11px 12px;background:var(--soft);color:var(--ink);font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .form-grid input:focus,.form-grid select:focus,.form-grid textarea:focus,.manual-row input:focus,.manual-row select:focus,.filters input:focus,.filters select:focus,.settings-grid input:focus,.settings-grid select:focus,.settings-grid textarea:focus,.search-row input:focus,.unlock-row input:focus,.stack input:focus,.service-search input:focus{border-color:var(--brand);box-shadow:0 0 0 4px #7c248d18}
 .form-grid textarea,.settings-grid textarea{min-height:74px;resize:vertical}
 .field-error{outline:3px solid #d92d20!important;outline-offset:2px}
@@ -95,7 +97,7 @@ td input{width:100%;max-width:100%;min-width:0;border:1px solid var(--line);bord
 .sum-row.grand{background:linear-gradient(135deg,var(--brand),#c544e3);color:white;border:0}
 .sum-row.grand strong{font-size:20px}
 
-.search-row{display:grid;grid-template-columns:minmax(0,1fr) 135px;gap:8px;width:100%;max-width:100%;min-width:0;margin-bottom:10px}
+.search-row{display:grid;grid-template-columns:minmax(0,1fr) 135px;gap:8px;align-items:end;width:100%;max-width:100%;min-width:0;margin-bottom:10px}
 .history{display:grid;gap:8px;max-width:100%;min-width:0;max-height:430px;overflow:auto}
 .history-item{max-width:100%;min-width:0;border:1px solid var(--line);border-radius:13px;padding:10px;background:white}
 .history-top{display:flex;justify-content:space-between;gap:8px;max-width:100%;min-width:0}

@@ -453,7 +453,7 @@ function validateCurrentBill(requireMobileForShare = false) {
 
   if (!items.length) {
     toast('Add at least one service before continuing', 'error');
-    $('serviceSearch').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    $('itemServiceSearch').scrollIntoView({ behavior: 'smooth', block: 'center' });
     return false;
   }
 
@@ -518,7 +518,7 @@ function renderStaffOptions() {
 
 function renderServices() {
   const services = activeServices();
-  const query = $('serviceSearch').value.trim().toLowerCase();
+  const query = $('itemServiceSearch').value.trim().toLowerCase();
   const selectedId = $('itemSelect').value;
   const visibleServices = query ? services.filter(service =>
     String(service.name || '').toLowerCase().includes(query) ||
@@ -538,7 +538,15 @@ function renderServices() {
   $('itemSelect').onchange = () => {
     const service = visibleServices.find(item => item.id === $('itemSelect').value);
     if (service) $('itemRate').value = service.rate;
+    updateAddItemTotal();
   };
+  updateAddItemTotal();
+}
+
+function updateAddItemTotal() {
+  const qty = Math.max(1, Number($('itemQty').value) || 1);
+  const rate = Math.max(0, Number($('itemRate').value) || 0);
+  $('itemTotal').textContent = money(qty * rate);
 }
 
 function addSelectedItem() {
@@ -648,7 +656,8 @@ async function resetBill(ask = true) {
   $('notes').value = '';
   $('itemQty').value = 1;
   $('itemRate').value = 0;
-  $('serviceSearch').value = '';
+  $('itemServiceSearch').value = '';
+  updateAddItemTotal();
   await assignNewInvoiceNumber();
   dirty = false;
   renderItems();
@@ -1273,7 +1282,9 @@ function importBackupFile(file) {
 
 function bindEvents() {
   $('addItemBtn').onclick = addSelectedItem;
-  $('serviceSearch').oninput = renderServices;
+  $('itemServiceSearch').oninput = renderServices;
+  $('itemQty').oninput = updateAddItemTotal;
+  $('itemRate').oninput = updateAddItemTotal;
   $('saveBillBtn').onclick = saveBill;
   $('newBillBtn').onclick = () => resetBill(true);
   $('printBillBtn').onclick = () => {
